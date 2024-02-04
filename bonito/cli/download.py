@@ -148,6 +148,10 @@ def main(args):
         print("[downloading training data]", file=sys.stderr)
         for train in training:
             File(__data__, train, args.force).download()
+    
+    if args.ctc:
+        print("[downloading dna_r9.4.1_e8_fast@v3.4 CTC model]")
+        File(__models__, models[26], args.force).download()
 
 
 def argparser():
@@ -161,4 +165,5 @@ def argparser():
     group.add_argument('--training', action='store_true')
     parser.add_argument('--list', '--show', dest='show', action='store_true')
     parser.add_argument('-f', '--force', action='store_true')
+    parser.add_argument('--ctc', action='store_true')
     return parser
