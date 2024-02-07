@@ -88,7 +88,7 @@ def main(args):
         dtype=torch.qint8  # Use 8-bit integer quantization
     )
     
-    quantized_model.prep_for_save()
+    # quantized_model.prep_for_save()
     # quantized_model_path = 'path/to/save/quantized_model.tar'
     torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
     # torch.save(quantized_model.state_dict(), quantized_model_path)
