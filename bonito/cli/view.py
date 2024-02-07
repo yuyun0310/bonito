@@ -2,6 +2,7 @@
 Bonito model viewer - display a model architecture for a given config.
 """
 
+from re import M
 import toml
 import argparse
 from bonito.util import load_symbol
@@ -49,7 +50,7 @@ def main(args):
     config = toml.load(args.config)
 
     # Directory to save graph
-    workdir = args.config + '/view'
+    workdir = args.dir + '/view'
     print(workdir)
     if os.path.exists(workdir) and not args.force:
         print("[error] %s exists, use -f to force continue training and overwrite files." % workdir)
@@ -70,6 +71,9 @@ def main(args):
         print(model, file=file)
         print("Total parameters in model", sum(p.numel() for p in model.parameters()), file=file)
 
+    compare_params_in_layers(model, workdir)
+    visualize_model(model, workdir)
+
 
 def argparser():
     parser = argparse.ArgumentParser(
@@ -78,5 +82,6 @@ def argparser():
     )
     parser.add_argument("config") # also the directory to save graphs generated
     parser.add_argument("--device", default="cpu") # or cuda
+    parser.add_argument("--dir")
     
     return parser
