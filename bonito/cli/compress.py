@@ -5,23 +5,22 @@ Bonito model compression.
 """
 
 import os
-import csv
-from functools import partial
-from datetime import datetime
-from collections import OrderedDict
 from argparse import ArgumentParser
 from argparse import ArgumentDefaultsHelpFormatter
+from pathlib import Path
+from importlib import import_module
 
-from bonito.util import load_data, load_model, load_symbol, init, default_config, default_data, get_parameters_count
-from bonito.training import ChunkDataSet, load_state, train, test, func_scheduler, cosine_decay_schedule, CSVLogger
+from bonito.data import load_numpy, load_script
+from bonito.util import __models__, default_config, default_data
+from bonito.util import load_model, load_symbol, init, half_supported
+from bonito.training import load_state, Trainer
 
 import toml
 import torch
 import numpy as np
-import torch.nn.utils.prune as prune
-from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from torch.nn import LSTM
+from torch.optim import AdamW
 
 import warnings
 
@@ -30,44 +29,56 @@ def main(args):
     workdir = os.path.expanduser(args.training_directory)
 
     if os.path.exists(workdir) and not args.force:
-        print("[error] %s exists, use -f to force continue training and overwrite files." % workdir)
+        print("[error] %s exists, use -f to force continue training." % workdir)
         exit(1)
 
-    init(args.seed, args.device)
+    init(args.seed, args.device, (not args.nondeterministic))
     device = torch.device(args.device)
-    config = toml.load(args.config)
-    os.makedirs(workdir, exist_ok=True)
 
-    # Loading training & validation data
-    print("[loading data]")
-    train_data = load_data(limit=args.chunks, directory=args.directory)
-    if os.path.exists(os.path.join(args.directory, 'validation')):
-        split = np.floor(len(train_data[0]) * 0.25).astype(np.int32)
-        train_data = [x[:split] for x in train_data]
-        valid_data = load_data(limit=args.val_chunks, directory=os.path.join(args.directory, 'validation'))
+    if not args.pretrained:
+        config = toml.load(args.config)
     else:
-        print("[validation set not found: splitting training set]")
-        split = np.floor(len(train_data[0]) * 0.97).astype(np.int32)
-        valid_data = [x[split:] for x in train_data]
-        train_data = [x[:split] for x in train_data]
-    train_loader = DataLoader(ChunkDataSet(*train_data), batch_size=args.batch, shuffle=True, num_workers=4, pin_memory=True)
-    valid_loader = DataLoader(ChunkDataSet(*valid_data), batch_size=args.batch, num_workers=4, pin_memory=True)
+        dirname = args.pretrained
+        if not os.path.isdir(dirname) and os.path.isdir(os.path.join(__models__, dirname)):
+            dirname = os.path.join(__models__, dirname)
+        pretrain_file = os.path.join(dirname, 'config.toml')
+        config = toml.load(pretrain_file)
+        if 'lr_scheduler' in config:
+            print(f"[ignoring 'lr_scheduler' in --pretrained config]")
+            del config['lr_scheduler']
 
-    # Writing config file to workdir
     argsdict = dict(training=vars(args))
-    chunk_config = {}
-    chunk_config_file = os.path.join(args.directory, 'config.toml')
-    if os.path.isfile(chunk_config_file):
-        chunk_config = toml.load(os.path.join(chunk_config_file))
-    toml.dump({**config, **argsdict, **chunk_config}, open(os.path.join(workdir, 'config.toml'), 'w'))
 
-    # Loading pretrained model
-    assert(args.pretrained) # Can only compress pretrained model
-    print("[using pretrained model {}]".format(args.pretrained))
-    model = load_model(args.pretrained, device, half=False, weights=args.weights)
-    optimizer = AdamW(model.parameters(), amsgrad=False, lr=args.lr)
-    torch.save(model.state_dict(), os.path.join(workdir, "weights.orig.tar"))
-    criterion = model.seqdist.ctc_loss if hasattr(model, 'seqdist') else None
+    print("[loading model]")
+    if args.pretrained:
+        print("[using pretrained model {}]".format(args.pretrained))
+        model = load_model(args.pretrained, device, half=False)
+    else:
+        model = load_symbol(config, 'Model')(config)
+
+    print("[loading data]")
+    try:
+        train_loader_kwargs, valid_loader_kwargs = load_numpy(
+            args.chunks, args.directory, valid_chunks = args.valid_chunks
+        )
+    except FileNotFoundError:
+        train_loader_kwargs, valid_loader_kwargs = load_script(
+            args.directory,
+            seed=args.seed,
+            chunks=args.chunks,
+            valid_chunks=args.valid_chunks,
+            n_pre_context_bases=getattr(model, "n_pre_context_bases", 0),
+            n_post_context_bases=getattr(model, "n_post_context_bases", 0),
+        )
+
+    loader_kwargs = {
+        "batch_size": args.batch, "num_workers": 4, "pin_memory": True
+    }
+    train_loader = DataLoader(**loader_kwargs, **train_loader_kwargs)
+    valid_loader = DataLoader(**loader_kwargs, **valid_loader_kwargs)
+
+    os.makedirs(workdir, exist_ok=True)
+    toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
 
     # # Run on cuda
     # val_loss, val_mean, val_median = test(model, device, valid_loader, criterion=criterion)
