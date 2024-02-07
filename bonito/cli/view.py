@@ -18,7 +18,7 @@ def compare_params_in_layers(model, workdir):
     param_sizes = [param.nelement() for _, param in model.named_parameters()]
 
     # Plot
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(15, 10))
     idx = np.arange(len(param_names))
     plt.barh(idx, param_sizes, color='skyblue')
     plt.yticks(idx, param_names)
@@ -63,7 +63,7 @@ def main(args):
     print("Total parameters in model", sum(p.numel() for p in model.parameters()))
     
     # Define the path where you want to save the text file
-    save_path = workdir + '/model_visualization.png'
+    save_path = workdir + '/params_print.txt'
 
     # Open the file in write mode
     with open(save_path, 'w') as file:
