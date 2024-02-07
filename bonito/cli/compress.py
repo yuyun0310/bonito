@@ -22,8 +22,6 @@ from torch.utils.data import DataLoader
 from torch.nn import LSTM
 from torch.optim import AdamW
 
-import warnings
-
 def main(args):
 
     workdir = os.path.expanduser(args.training_directory)
@@ -192,4 +190,5 @@ def argparser():
     parser.add_argument("--prune_level", default=0.6, type=float)
     parser.add_argument("--structured", action="store_true", default=False)
     parser.add_argument("--pruning_iterations", default=1, type=int)
+    parser.add_argument("--nondeterministic", action="store_true", default=False)
     return parser 
