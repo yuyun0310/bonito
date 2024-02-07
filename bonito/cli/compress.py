@@ -21,6 +21,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 from torch.nn import LSTM
 from torch.optim import AdamW
+from torch.quantization import quantize_dynamic
 
 def main(args):
 
@@ -78,7 +79,19 @@ def main(args):
     os.makedirs(workdir, exist_ok=True)
     toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
 
+    model.to('cpu')  # Move the model to CPU for quantization
 
+    # Apply dynamic quantization to the LSTM and linear layers
+    quantized_model = quantize_dynamic(
+        model,
+        {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
+        dtype=torch.qint8  # Use 8-bit integer quantization
+    )
+    
+    quantized_model.prep_for_save()
+    # quantized_model_path = 'path/to/save/quantized_model.tar'
+    torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
+    # torch.save(quantized_model.state_dict(), quantized_model_path)
 
 def argparser():
     parser = ArgumentParser(
