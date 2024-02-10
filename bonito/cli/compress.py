@@ -26,6 +26,17 @@ from torch.nn import LSTM
 from torch.optim import AdamW
 from torch.quantization import quantize_dynamic
 import torch.nn as nn
+import copy
+
+def model_dequantization(quantized_model, original_model):
+    with torch.no_grad():
+        for quantized_param, original_param in zip(quantized_model.state_dict().items(), original_model.state_dict().items()):
+            # Assuming the names and orders of parameters match exactly between the models
+            name, quantized_weight = quantized_param
+            _, original_weight = original_param
+            if "weight" in name or "bias" in name:  # Transfer weights and biases
+                original_weight.data.copy_(quantized_weight.data)
+    return original_model
 
 def evaluate_model(args, model, dataloader, device):
     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
@@ -41,8 +52,8 @@ def evaluate_model(args, model, dataloader, device):
 
             log_probs = model(data)
 
-            model.to('cuda')
-            log_probs.to('cuda')
+            # model.to('cuda')
+            # log_probs.to('cuda')
 
             if hasattr(model, 'decode_batch'):
                 seqs.extend(model.decode_batch(log_probs))
@@ -139,11 +150,16 @@ def main(args):
 
     quantized_model.eval()
 
+    # Prepare for evaluation
+    model_copy = copy.deepcopy(model)
+    dequantized_model = model_dequantization(quantized_model, model_copy)
+    dequantized_model.to(args.device)
+
     print('*'*50)
     print("in evaluation")
-    evaluate_model(args, quantized_model, valid_loader, 'cpu')
+    evaluate_model(args, dequantized_model, valid_loader, args.device)
     print('*'*50)
-    evaluate_model(args, quantized_model, train_loader, 'cpu')
+    evaluate_model(args, dequantized_model, train_loader, args.device)
     print('*'*50)
 
 def argparser():
