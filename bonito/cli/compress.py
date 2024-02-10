@@ -130,6 +130,7 @@ def main(args):
     torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
     # torch.save(quantized_model.state_dict(), quantized_model_path)
 
+    quantized_model.to(args.device)
     print('*'*50)
     evaluate_model(args, quantized_model, train_loader)
     print('*'*50)
