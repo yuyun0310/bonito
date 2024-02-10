@@ -25,7 +25,7 @@ from torch.optim import AdamW
 from torch.quantization import quantize_dynamic
 
 def evaluate_model(args, model, dataloader):
-    accuracy_with_cov = lambda ref, seq: accuracy(ref, seq, min_coverage=args.min_coverage)
+    accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
 
     seqs = []
     t0 = time.perf_counter()
