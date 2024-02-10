@@ -55,6 +55,7 @@ def evaluate_model(args, model, dataloader, device):
                 seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
 
     duration = time.perf_counter() - t0
+    print("out")
 
     refs = [decode_ref(target, model.alphabet) for target in targets]
     accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
@@ -256,9 +257,10 @@ def main(args):
         print(name, param.data.dtype)
 
     print('*'*50)
-    evaluate_model(args, quantized_model_retrained, train_loader, args.device)
-    print('*'*50)
+    print("in evaluation")
     evaluate_model(args, quantized_model_retrained, valid_loader, args.device)
+    print('*'*50)
+    evaluate_model(args, quantized_model_retrained, train_loader, args.device)
     print('*'*50)
 
 def argparser():
