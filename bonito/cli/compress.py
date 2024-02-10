@@ -5,6 +5,8 @@ Bonito model compression.
 """
 
 import os
+import sys
+
 from argparse import ArgumentParser
 from argparse import ArgumentDefaultsHelpFormatter
 from pathlib import Path
@@ -27,6 +29,9 @@ import torch.nn as nn
 
 from pytorch_quantization import quant_modules
 from pytorch_quantization.tensor_quant import QuantDescriptor
+
+# Add the directory containing your module to the Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from quantization import convert_to_quantizable_model
 
