@@ -12,9 +12,10 @@ from importlib import import_module
 
 from bonito.data import load_numpy, load_script
 from bonito.util import __models__, default_config, default_data
-from bonito.util import load_model, load_symbol, init, half_supported
+from bonito.util import load_model, load_symbol, init, half_supported, accuracy, permute, decode_ref
 from bonito.training import load_state, Trainer
 
+import time
 import toml
 import torch
 import numpy as np
@@ -22,6 +23,46 @@ from torch.utils.data import DataLoader
 from torch.nn import LSTM
 from torch.optim import AdamW
 from torch.quantization import quantize_dynamic
+
+def evaluate_model(args, model, dataloader):
+    accuracy_with_cov = lambda ref, seq: accuracy(ref, seq, min_coverage=args.min_coverage)
+
+    for w in [int(i) for i in args.weights.split(',')]:
+
+        seqs = []
+
+        print("* loading model", w)
+        model = load_model(args.model_directory, args.device, weights=w)
+
+        print("* calling")
+        t0 = time.perf_counter()
+
+        targets = []
+
+        with torch.no_grad():
+            for data, target, *_ in dataloader:
+                targets.extend(torch.unbind(target, 0))
+                if half_supported():
+                    data = data.type(torch.float16).to(args.device)
+                else:
+                    data = data.to(args.device)
+
+                log_probs = model(data)
+
+                if hasattr(model, 'decode_batch'):
+                    seqs.extend(model.decode_batch(log_probs))
+                else:
+                    seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
+
+        duration = time.perf_counter() - t0
+
+        refs = [decode_ref(target, model.alphabet) for target in targets]
+        accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
+
+        print("* mean      %.2f%%" % np.mean(accuracies))
+        print("* median    %.2f%%" % np.median(accuracies))
+        print("* time      %.2f" % duration)
+        print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
 
 def main(args):
 
@@ -79,6 +120,13 @@ def main(args):
     os.makedirs(workdir, exist_ok=True)
     toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
 
+    # Evaluate the performance of the model before dynamic quantization
+    print('*'*50)
+    evaluate_model(args, model, train_loader)
+    print('*'*50)
+    evaluate_model(args, model, valid_loader)
+    print('*'*50)
+
     model.to('cpu')  # Move the model to CPU for quantization
 
     # Apply dynamic quantization to the LSTM and linear layers
@@ -92,6 +140,12 @@ def main(args):
     # quantized_model_path = 'path/to/save/quantized_model.tar'
     torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
     # torch.save(quantized_model.state_dict(), quantized_model_path)
+
+    print('*'*50)
+    evaluate_model(args, quantized_model, train_loader)
+    print('*'*50)
+    evaluate_model(args, quantized_model, valid_loader)
+    print('*'*50)
 
 def argparser():
     parser = ArgumentParser(
