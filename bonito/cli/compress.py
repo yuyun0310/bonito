@@ -193,6 +193,7 @@ def main(args):
 
     # model = MyCustomModel(input_size, hidden_size, output_size)
     replace_layers(quantized_model)
+    quantized_model = quantized_model.to(args.device)
 
     # quantized_model.to('cpu')
     print('*'*50)
