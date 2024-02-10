@@ -60,7 +60,7 @@ def evaluate_model_quant(args, model, dequant_model, dataloader, device):
     with torch.no_grad():
         for data, target, *_ in dataloader:
             targets.extend(torch.unbind(target, 0))
-            data = data.to(device)
+            data = data.to('cpu')
 
             log_probs = model(data)
 
