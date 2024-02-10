@@ -33,12 +33,8 @@ def evaluate_model(args, model, dataloader):
 
     with torch.no_grad():
         for data, target, *_ in dataloader:
-            data = data.half()
             targets.extend(torch.unbind(target, 0))
-            if half_supported():
-                data = data.type(torch.float16).to(args.device)
-            else:
-                data = data.to(args.device)
+            data = data.to(args.device)
 
             log_probs = model(data)
 
@@ -120,7 +116,7 @@ def main(args):
     evaluate_model(args, model, valid_loader)
     print('*'*50)
 
-    model.to('cpu').half()  # Move the model to CPU for quantization
+    model.to('cpu')  # Move the model to CPU for quantization
 
     # Apply dynamic quantization to the LSTM and linear layers
     quantized_model = quantize_dynamic(
