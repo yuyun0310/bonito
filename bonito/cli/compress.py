@@ -164,7 +164,14 @@ def main(args):
     # torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
     # # torch.save(quantized_model.state_dict(), quantized_model_path)
 
-    quantized_model = model.use_koi()
+    # quantized_model = model.use_koi()
+    print("[loading quantized_model]")
+    if args.pretrained:
+        print("[using pretrained model {}]".format(args.pretrained))
+        quantized_model = load_model(args.pretrained, device, half=False, use_koi=True)
+    else:
+        quantized_model = load_symbol(config, 'Model')(config)
+
 
     # quantized_model.to('cpu')
     print('*'*50)
