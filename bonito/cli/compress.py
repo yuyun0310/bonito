@@ -144,10 +144,6 @@ def main(args):
     else:
         model = load_symbol(config, 'Model')(config)
 
-    # optimizer = AdamW(model.parameters(), amsgrad=False, lr=args.lr)
-    # torch.save(model.state_dict(), os.path.join(workdir, "weights.orig.tar"))
-    # criterion = model.seqdist.ctc_loss if hasattr(model, 'seqdist') else None
-
     print("[loading data]")
     try:
         train_loader_kwargs, valid_loader_kwargs = load_numpy(
@@ -171,6 +167,7 @@ def main(args):
 
     os.makedirs(workdir, exist_ok=True)
     toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
+    torch.save(model.state_dict(), os.path.join(workdir, "origin.tar"))
 
     # Evaluate the performance of the model before dynamic quantization
     print('*'*50)
@@ -205,8 +202,11 @@ def main(args):
     # # replace_layers(quantized_model)
     # # quantized_model = quantized_model.to(args.device)
 
+    
+    # quant_modules.initialize()
     # Enable quantization for the entire model
-    quant_modules.initialize()
+    quant_desc = QuantDescriptor(calib_method="histogram", bits=8)
+    quant_modules.initialize(model, quant_desc)
 
     # # Customize quantization configurations if necessary
     # quant_desc_input = QuantDescriptor(calib_method='histogram')
@@ -214,13 +214,44 @@ def main(args):
     # model.cuda()
     quantized_model = convert_to_quantizable_model(model)
 
-    print(quantized_model)
+    '''
+    Train
+    '''
 
-    # quantized_model.to('cpu')
+    # optimizer = AdamW(quantized_model.parameters(), amsgrad=False, lr=args.lr)
+    # criterion = quantized_model.seqdist.ctc_loss if hasattr(quantized_model, 'seqdist') else None
+
+    if config.get("lr_scheduler"):
+        sched_config = config["lr_scheduler"]
+        lr_scheduler_fn = getattr(
+            import_module(sched_config["package"]), sched_config["symbol"]
+        )(**sched_config)
+    else:
+        lr_scheduler_fn = None
+
+    trainer = Trainer(
+        quantized_model, device, train_loader, valid_loader,
+        use_amp=half_supported() and not args.no_amp,
+        lr_scheduler_fn=lr_scheduler_fn,
+        restore_optim=args.restore_optim,
+        save_optim_every=args.save_optim_every,
+        grad_accum_split=args.grad_accum_split,
+        quantile_grad_clip=args.quantile_grad_clip
+    )
+
+    if (',' in args.lr):
+        lr = [float(x) for x in args.lr.split(',')]
+    else:
+        lr = float(args.lr)
+    trainer.fit(workdir, args.epochs, lr)
+
+    quantized_model_retrained = trainer.model
+    print(quantized_model_retrained)
+
     print('*'*50)
-    evaluate_model(args, quantized_model, train_loader, args.device)
+    evaluate_model(args, quantized_model_retrained, train_loader, args.device)
     print('*'*50)
-    evaluate_model(args, quantized_model, valid_loader, args.device)
+    evaluate_model(args, quantized_model_retrained, valid_loader, args.device)
     print('*'*50)
 
 def argparser():
@@ -236,12 +267,17 @@ def argparser():
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--lr", default='2e-3')
     parser.add_argument("--seed", default=25, type=int)
-    parser.add_argument("--epochs", default=5, type=int)
+    parser.add_argument("--epochs", default=1, type=int)
     parser.add_argument("--batch", default=64, type=int)
     parser.add_argument("--chunks", default=0, type=int)
     parser.add_argument("--valid-chunks", default=1000, type=int)
     parser.add_argument("--no-amp", action="store_true", default=False)
     parser.add_argument("-f", "--force", action="store_true", default=False)
+    parser.add_argument("--restore-optim", action="store_true", default=False)
+    parser.add_argument("--nondeterministic", action="store_true", default=False)
+    parser.add_argument("--save-optim-every", default=10, type=int)
+    parser.add_argument("--grad-accum-split", default=1, type=int)
+    parser.add_argument("--quantile-grad-clip", action="store_true", default=False)
     parser.add_argument("--restore-optim", action="store_true", default=False)
     parser.add_argument("--nondeterministic", action="store_true", default=False)
     parser.add_argument("--save-optim-every", default=10, type=int)
