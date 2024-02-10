@@ -36,7 +36,7 @@ def evaluate_model(args, model, dataloader, device):
             targets.extend(torch.unbind(target, 0))
             data = data.to(device)
 
-            log_probs = model(data).to('cuda')
+            log_probs = model(data)
 
             if hasattr(model, 'decode_batch'):
                 seqs.extend(model.decode_batch(log_probs))
