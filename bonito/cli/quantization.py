@@ -7,19 +7,19 @@ def convert_to_quantizable_layer(module):
     """
     Recursively convert supported layers to their quantizable versions.
     """
-    print("#"*50)
-    print(type(module), module)
-    print("#"*50)
+    # print("#"*50)
+    # print(type(module), module)
+    # print("#"*50)
     mod = module
     if isinstance(module, nn.modules.conv.Conv1d):
-        print("in 1")
+        # print("in 1")
         mod = quant_nn.QuantConv1d(module.in_channels, module.out_channels, module.kernel_size, 
                                    stride=module.stride, padding=module.padding, bias=(module.bias is not None))
     elif isinstance(module, nn.modules.linear.Linear):
-        print("in 2")
+        # print("in 2")
         mod = quant_nn.QuantLinear(module.in_features, module.out_features, bias=(module.bias is not None))
     elif isinstance(module, nn.modules.rnn.LSTM):
-        print("in 3")
+        # print("in 3")
         mod = quant_nn.QuantLSTM(module.input_size, module.hidden_size, module.num_layers, module.bias,
                                  module.batch_first, module.dropout, module.bidirectional, module.proj_size)
     
