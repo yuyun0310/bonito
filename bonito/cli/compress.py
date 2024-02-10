@@ -36,12 +36,51 @@ def model_dequantization(quantized_model, original_model):
     print("\nQuantized Model Keys:")
     for key in quantized_model.state_dict().keys():
         print(key)
+    # with torch.no_grad():
+    #     for name, quantized_weight in quantized_model.state_dict().items():
+    #         if "weight" in name or "bias" in name:
+    #             # Directly copy the data for compatible parameters
+    #             original_model.state_dict()[name].copy_(quantized_weight)
+        
     with torch.no_grad():
-        for name, quantized_weight in quantized_model.state_dict().items():
-            if "weight" in name or "bias" in name:
-                # Directly copy the data for compatible parameters
-                original_model.state_dict()[name].copy_(quantized_weight)
+        for name, param in original_model.named_parameters():
+            if 'conv' in name or 'linear' in name:
+                quantized_param = quantized_model.state_dict()[name]
+                param.copy_(quantized_param)
+
     return original_model
+
+def evaluate_model_quant(args, model, dequant_model, dataloader, device):
+    accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
+
+    seqs = []
+    t0 = time.perf_counter()
+    targets = []
+
+    with torch.no_grad():
+        for data, target, *_ in dataloader:
+            targets.extend(torch.unbind(target, 0))
+            data = data.to(device)
+
+            log_probs = model(data)
+
+            # model.to('cuda')
+            # log_probs.to('cuda')
+
+            if hasattr(dequant_model, 'decode_batch'):
+                seqs.extend(dequant_model.decode_batch(log_probs))
+            else:
+                seqs.extend([dequant_model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
+
+    duration = time.perf_counter() - t0
+
+    refs = [decode_ref(target, model.alphabet) for target in targets]
+    accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
+
+    print("* mean      %.2f%%" % np.mean(accuracies))
+    print("* median    %.2f%%" % np.median(accuracies))
+    print("* time      %.2f" % duration)
+    print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
 
 def evaluate_model(args, model, dataloader, device):
     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
@@ -162,9 +201,9 @@ def main(args):
 
     print('*'*50)
     print("in evaluation")
-    evaluate_model(args, dequantized_model, valid_loader, args.device)
+    evaluate_model_quant(args, quantized_model, dequantized_model, valid_loader, args.device)
     print('*'*50)
-    evaluate_model(args, dequantized_model, train_loader, args.device)
+    evaluate_model_quant(args, quantized_model, dequantized_model, train_loader, args.device)
     print('*'*50)
 
 def argparser():
