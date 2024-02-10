@@ -38,10 +38,7 @@ def evaluate_model(args, model, dataloader, device):
 
             log_probs = model(data)
 
-            if hasattr(model, 'decode_batch'):
-                seqs.extend(model.decode_batch(log_probs))
-            else:
-                seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
+            seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
 
     duration = time.perf_counter() - t0
 
@@ -130,11 +127,11 @@ def main(args):
     torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
     # torch.save(quantized_model.state_dict(), quantized_model_path)
 
-    quantized_model.to(args.device)
+    quantized_model.to('cpu')
     print('*'*50)
-    evaluate_model(args, quantized_model, train_loader, args.device)
+    evaluate_model(args, quantized_model, train_loader, 'cpu')
     print('*'*50)
-    evaluate_model(args, quantized_model, valid_loader, args.device)
+    evaluate_model(args, quantized_model, valid_loader, 'cpu')
     print('*'*50)
 
 def argparser():
