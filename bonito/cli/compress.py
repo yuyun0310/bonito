@@ -181,8 +181,8 @@ def main(args):
 
     # Evaluate the performance of the model before dynamic quantization
     print('*'*50)
-    evaluate_model(args, model, train_loader, args.device)
-    print('*'*50)
+    # evaluate_model(args, model, train_loader, args.device)
+    # print('*'*50)
     evaluate_model(args, model, valid_loader, args.device)
     print('*'*50)
 
@@ -218,9 +218,9 @@ def main(args):
     model.eval()
 
     print('*'*50)
-    print("in evaluation")
-    evaluate_model_quant(args, quantized_model, model, train_loader, args.device)
-    print('*'*50)
+    # print("in evaluation")
+    # evaluate_model_quant(args, quantized_model, model, train_loader, args.device)
+    # print('*'*50)
     evaluate_model_quant(args, quantized_model, model, valid_loader, args.device)
     print('*'*50)
 
