@@ -23,6 +23,11 @@ from torch.utils.data import DataLoader
 from torch.nn import LSTM
 from torch.optim import AdamW
 from torch.quantization import quantize_dynamic
+import torch.nn as nn
+
+from pytorch_quantization import quant_modules
+from pytorch_quantization.nn import QuantLinear, QuantLSTM
+from pytorch_quantization import calib
 
 def evaluate_model(args, model, dataloader, device):
     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
@@ -86,6 +91,20 @@ def evaluate_model(args, model, dataloader, device):
 #     print("* time      %.2f" % duration)
 #     print("* samples/s %.2E" % (len(data) * data.shape[2] / duration))
 
+# For pytorch-quantization, you might need to manually replace layers
+def replace_layers(model):
+    for name, module in model.named_children():
+        if isinstance(module, torch.nn.Linear):
+            quant_layer = QuantLinear(module.in_features, module.out_features, bias=module.bias is not None)
+            quant_layer.weight = module.weight
+            quant_layer.bias = module.bias
+            setattr(model, name, quant_layer)
+        elif isinstance(module, torch.nn.LSTM):
+            # Similar process for LSTM, but ensure you handle the complexities of LSTM layers
+            # This is a simplification, and you might need a more detailed conversion
+            setattr(model, name, QuantLSTM(module))  # This is a placeholder, adjust as needed
+        else:
+            replace_layers(module)
 
 def main(args):
 
@@ -150,28 +169,30 @@ def main(args):
     evaluate_model(args, model, valid_loader, args.device)
     print('*'*50)
 
-    # model.to('cpu')  # Move the model to CPU for quantization
+    model.to('cpu')  # Move the model to CPU for quantization
 
-    # # Apply dynamic quantization to the LSTM and linear layers
-    # quantized_model = quantize_dynamic(
-    #     model,
-    #     {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
-    #     dtype=torch.qint8  # Use 8-bit integer quantization
-    # )
+    # Apply dynamic quantization to the LSTM and linear layers
+    quantized_model = quantize_dynamic(
+        model,
+        {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
+        dtype=torch.qint8  # Use 8-bit integer quantization
+    )
     
-    # # quantized_model.prep_for_save()
-    # # quantized_model_path = 'path/to/save/quantized_model.tar'
-    # torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
-    # # torch.save(quantized_model.state_dict(), quantized_model_path)
+    # quantized_model.prep_for_save()
+    # quantized_model_path = 'path/to/save/quantized_model.tar'
+    torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
+    # torch.save(quantized_model.state_dict(), quantized_model_path)
 
     # quantized_model = model.use_koi()
-    print("[loading quantized_model]")
-    if args.pretrained:
-        print("[using pretrained model {}]".format(args.pretrained))
-        quantized_model = load_model(args.pretrained, device, half=False, use_koi=True)
-    else:
-        quantized_model = load_symbol(config, 'Model')(config)
+    # print("[loading quantized_model]")
+    # if args.pretrained:
+    #     print("[using pretrained model {}]".format(args.pretrained))
+    #     quantized_model = load_model(args.pretrained, device, half=False, use_koi=True)
+    # else:
+    #     quantized_model = load_symbol(config, 'Model')(config)
 
+    # model = MyCustomModel(input_size, hidden_size, output_size)
+    replace_layers(quantized_model)
 
     # quantized_model.to('cpu')
     print('*'*50)
