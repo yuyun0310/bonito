@@ -203,10 +203,10 @@ def main(args):
     # # quantized_model = quantized_model.to(args.device)
 
     
-    # quant_modules.initialize()
+    quant_modules.initialize()
     # Enable quantization for the entire model
-    quant_desc = QuantDescriptor(calib_method="histogram", num_bits=8)
-    quant_modules.initialize(model, quant_desc)
+    # quant_desc = QuantDescriptor(calib_method="histogram", num_bits=8)
+    # quant_modules.initialize(model, quant_desc)
 
     # # Customize quantization configurations if necessary
     # quant_desc_input = QuantDescriptor(calib_method='histogram')
