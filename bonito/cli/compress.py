@@ -64,13 +64,13 @@ def evaluate_model_quant(args, model, dequant_model, dataloader, device):
 
             log_probs = model(data)
             print(type(log_probs))
-            print(log_probs)
+            print(log_probs.shape)
 
             print("%" * 50)
 
             log_probs = dequant_model(data)
             print(type(log_probs))
-            print(log_probs)
+            print(log_probs.shape)
 
             print("%" * 50)
 
@@ -212,6 +212,12 @@ def main(args):
     # model_copy = copy.deepcopy(model)
     # dequantized_model = model_dequantization(quantized_model, model_copy)
     # dequantized_model.to(args.device)
+
+    if args.pretrained:
+        print("[using pretrained model {}]".format(args.pretrained))
+        model = load_model(args.pretrained, device, half=False)
+    else:
+        model = load_symbol(config, 'Model')(config)
 
     print('*'*50)
     print("in evaluation")
