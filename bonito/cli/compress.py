@@ -24,6 +24,35 @@ from torch.nn import LSTM
 from torch.optim import AdamW
 from torch.quantization import quantize_dynamic
 
+def evaluate_model(args, model, dataloader, device):
+    accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
+
+    seqs = []
+    t0 = time.perf_counter()
+    targets = []
+
+    with torch.no_grad():
+        for data, target, *_ in dataloader:
+            targets.extend(torch.unbind(target, 0))
+            data = data.to(device)
+
+            log_probs = model(data).to('cuda')
+
+            if hasattr(model, 'decode_batch'):
+                seqs.extend(model.decode_batch(log_probs))
+            else:
+                seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
+
+    duration = time.perf_counter() - t0
+
+    refs = [decode_ref(target, model.alphabet) for target in targets]
+    accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
+
+    print("* mean      %.2f%%" % np.mean(accuracies))
+    print("* median    %.2f%%" % np.median(accuracies))
+    print("* time      %.2f" % duration)
+    print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
+
 # def evaluate_model(args, model, dataloader, device):
 #     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
 
@@ -38,53 +67,24 @@ from torch.quantization import quantize_dynamic
 
 #             log_probs = model(data).to(device)
 
-#             if hasattr(model, 'decode_batch'):
-#                 seqs.extend(model.decode_batch(log_probs))
-#             else:
-#                 seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
+#             # Directly use model.decode without checking for decode_batch
+#             # Assuming permute function adjusts log_probs dimensions as needed
+#             for p in log_probs.permute(1, 0, 2):  # Adjust permute() as necessary for your model's input format
+#                 seq = model.decode(p)  # Decode each sequence individually
+#                 seqs.append(seq)  # Append the decoded sequence to seqs list
 
 #     duration = time.perf_counter() - t0
 
+#     # Decoding reference sequences for comparison
 #     refs = [decode_ref(target, model.alphabet) for target in targets]
+
+#     # Calculating accuracies for each decoded sequence against its reference
 #     accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
 
 #     print("* mean      %.2f%%" % np.mean(accuracies))
 #     print("* median    %.2f%%" % np.median(accuracies))
 #     print("* time      %.2f" % duration)
-#     print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
-
-def evaluate_model(args, model, dataloader, device):
-    accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
-
-    seqs = []
-    t0 = time.perf_counter()
-    targets = []
-
-    with torch.no_grad():
-        for data, target, *_ in dataloader:
-            targets.extend(torch.unbind(target, 0))
-            data = data.to(device)
-
-            log_probs = model(data).to(device)
-
-            # Directly use model.decode without checking for decode_batch
-            # Assuming permute function adjusts log_probs dimensions as needed
-            for p in log_probs.permute(1, 0, 2):  # Adjust permute() as necessary for your model's input format
-                seq = model.decode(p)  # Decode each sequence individually
-                seqs.append(seq)  # Append the decoded sequence to seqs list
-
-    duration = time.perf_counter() - t0
-
-    # Decoding reference sequences for comparison
-    refs = [decode_ref(target, model.alphabet) for target in targets]
-
-    # Calculating accuracies for each decoded sequence against its reference
-    accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
-
-    print("* mean      %.2f%%" % np.mean(accuracies))
-    print("* median    %.2f%%" % np.median(accuracies))
-    print("* time      %.2f" % duration)
-    print("* samples/s %.2E" % (len(data) * data.shape[2] / duration))
+#     print("* samples/s %.2E" % (len(data) * data.shape[2] / duration))
 
 
 def main(args):
@@ -150,25 +150,27 @@ def main(args):
     evaluate_model(args, model, valid_loader, args.device)
     print('*'*50)
 
-    model.to('cpu')  # Move the model to CPU for quantization
+    # model.to('cpu')  # Move the model to CPU for quantization
 
-    # Apply dynamic quantization to the LSTM and linear layers
-    quantized_model = quantize_dynamic(
-        model,
-        {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
-        dtype=torch.qint8  # Use 8-bit integer quantization
-    )
+    # # Apply dynamic quantization to the LSTM and linear layers
+    # quantized_model = quantize_dynamic(
+    #     model,
+    #     {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
+    #     dtype=torch.qint8  # Use 8-bit integer quantization
+    # )
     
-    # quantized_model.prep_for_save()
-    # quantized_model_path = 'path/to/save/quantized_model.tar'
-    torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
-    # torch.save(quantized_model.state_dict(), quantized_model_path)
+    # # quantized_model.prep_for_save()
+    # # quantized_model_path = 'path/to/save/quantized_model.tar'
+    # torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
+    # # torch.save(quantized_model.state_dict(), quantized_model_path)
 
-    quantized_model.to('cpu')
+    quantized_model = model.use_koi()
+
+    # quantized_model.to('cpu')
     print('*'*50)
-    evaluate_model(args, quantized_model, train_loader, 'cpu')
+    evaluate_model(args, quantized_model, train_loader, args.device)
     print('*'*50)
-    evaluate_model(args, quantized_model, valid_loader, 'cpu')
+    evaluate_model(args, quantized_model, valid_loader, args.device)
     print('*'*50)
 
 def argparser():
