@@ -214,6 +214,8 @@ def main(args):
     # model.cuda()
     quantized_model = convert_to_quantizable_model(model)
 
+    print(quantized_model)
+
     # quantized_model.to('cpu')
     print('*'*50)
     evaluate_model(args, quantized_model, train_loader, args.device)
