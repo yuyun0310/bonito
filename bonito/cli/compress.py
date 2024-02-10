@@ -30,12 +30,10 @@ import copy
 
 def model_dequantization(quantized_model, original_model):
     with torch.no_grad():
-        for quantized_param, original_param in zip(quantized_model.state_dict().items(), original_model.state_dict().items()):
-            # Assuming the names and orders of parameters match exactly between the models
-            name, quantized_weight = quantized_param
-            _, original_weight = original_param
-            if "weight" in name or "bias" in name:  # Transfer weights and biases
-                original_weight.data.copy_(quantized_weight.data)
+        for name, quantized_weight in quantized_model.state_dict().items():
+            if "weight" in name or "bias" in name:
+                # Directly copy the data for compatible parameters
+                original_model.state_dict()[name].copy_(quantized_weight)
     return original_model
 
 def evaluate_model(args, model, dataloader, device):
