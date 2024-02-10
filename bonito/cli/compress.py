@@ -76,8 +76,8 @@ def evaluate_model_quant(args, model, dequant_model, dataloader, device):
 
             # model.to('cuda')
             # log_probs.to('cuda')
-            dequant_model.to('cuda')
-            log_probs.to('cuda')
+            dequant_model = dequant_model.to('cuda')
+            log_probs = log_probs.to('cuda')
 
             if hasattr(dequant_model, 'decode_batch'):
                 seqs.extend(dequant_model.decode_batch(log_probs))
