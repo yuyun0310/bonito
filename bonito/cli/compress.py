@@ -74,7 +74,7 @@ def evaluate_model_quant(args, model, dequant_model, dataloader, device):
 
     duration = time.perf_counter() - t0
 
-    refs = [decode_ref(target, model.alphabet) for target in targets]
+    refs = [decode_ref(target, dequant_model.alphabet) for target in targets]
     accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
 
     print("* mean      %.2f%%" % np.mean(accuracies))
@@ -181,6 +181,10 @@ def main(args):
     evaluate_model(args, model, valid_loader, args.device)
     print('*'*50)
 
+    print("Original Model Keys:")
+    for key in model.state_dict().keys():
+        print(key)
+
     model.to('cpu')  # Move the model to CPU for quantization
 
     # Apply dynamic quantization to the LSTM and linear layers
@@ -194,16 +198,16 @@ def main(args):
 
     quantized_model.eval()
 
-    # Prepare for evaluation
-    model_copy = copy.deepcopy(model)
-    dequantized_model = model_dequantization(quantized_model, model_copy)
-    dequantized_model.to(args.device)
+    # # Prepare for evaluation
+    # model_copy = copy.deepcopy(model)
+    # dequantized_model = model_dequantization(quantized_model, model_copy)
+    # dequantized_model.to(args.device)
 
     print('*'*50)
     print("in evaluation")
-    evaluate_model_quant(args, quantized_model, dequantized_model, valid_loader, args.device)
+    evaluate_model_quant(args, quantized_model, model, valid_loader, args.device)
     print('*'*50)
-    evaluate_model_quant(args, quantized_model, dequantized_model, train_loader, args.device)
+    evaluate_model_quant(args, quantized_model, model, train_loader, args.device)
     print('*'*50)
 
 def argparser():
