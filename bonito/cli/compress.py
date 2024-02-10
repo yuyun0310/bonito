@@ -61,18 +61,19 @@ def evaluate_model_quant(args, model, dequant_model, dataloader, device):
         for data, target, *_ in dataloader:
             targets.extend(torch.unbind(target, 0))
             data = data.to('cpu')
+            model = model.to('cpu')
 
             log_probs = model(data)
-            print(type(log_probs))
-            print(log_probs.shape)
+            # print(type(log_probs))
+            # print(log_probs.shape)
 
-            print("%" * 50)
+            # print("%" * 50)
 
-            log_probs = dequant_model(data)
-            print(type(log_probs))
-            print(log_probs.shape)
+            # log_probs = dequant_model(data)
+            # print(type(log_probs))
+            # print(log_probs.shape)
 
-            print("%" * 50)
+            # print("%" * 50)
 
             # model.to('cuda')
             # log_probs.to('cuda')
