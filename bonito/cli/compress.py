@@ -27,42 +27,34 @@ from torch.quantization import quantize_dynamic
 def evaluate_model(args, model, dataloader):
     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq, min_coverage=args.min_coverage)
 
-    for w in [int(i) for i in args.weights.split(',')]:
+    seqs = []
+    t0 = time.perf_counter()
+    targets = []
 
-        seqs = []
+    with torch.no_grad():
+        for data, target, *_ in dataloader:
+            targets.extend(torch.unbind(target, 0))
+            if half_supported():
+                data = data.type(torch.float16).to(args.device)
+            else:
+                data = data.to(args.device)
 
-        print("* loading model", w)
-        model = load_model(args.model_directory, args.device, weights=w)
+            log_probs = model(data)
 
-        print("* calling")
-        t0 = time.perf_counter()
+            if hasattr(model, 'decode_batch'):
+                seqs.extend(model.decode_batch(log_probs))
+            else:
+                seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
 
-        targets = []
+    duration = time.perf_counter() - t0
 
-        with torch.no_grad():
-            for data, target, *_ in dataloader:
-                targets.extend(torch.unbind(target, 0))
-                if half_supported():
-                    data = data.type(torch.float16).to(args.device)
-                else:
-                    data = data.to(args.device)
+    refs = [decode_ref(target, model.alphabet) for target in targets]
+    accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
 
-                log_probs = model(data)
-
-                if hasattr(model, 'decode_batch'):
-                    seqs.extend(model.decode_batch(log_probs))
-                else:
-                    seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
-
-        duration = time.perf_counter() - t0
-
-        refs = [decode_ref(target, model.alphabet) for target in targets]
-        accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
-
-        print("* mean      %.2f%%" % np.mean(accuracies))
-        print("* median    %.2f%%" % np.median(accuracies))
-        print("* time      %.2f" % duration)
-        print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
+    print("* mean      %.2f%%" % np.mean(accuracies))
+    print("* median    %.2f%%" % np.median(accuracies))
+    print("* time      %.2f" % duration)
+    print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
 
 def main(args):
 
