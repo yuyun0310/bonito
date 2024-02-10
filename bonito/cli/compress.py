@@ -24,7 +24,7 @@ from torch.nn import LSTM
 from torch.optim import AdamW
 from torch.quantization import quantize_dynamic
 
-def evaluate_model(args, model, dataloader):
+def evaluate_model(args, model, dataloader, device):
     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
 
     seqs = []
@@ -34,7 +34,7 @@ def evaluate_model(args, model, dataloader):
     with torch.no_grad():
         for data, target, *_ in dataloader:
             targets.extend(torch.unbind(target, 0))
-            data = data.to(args.device)
+            data = data.to(device)
 
             log_probs = model(data)
 
@@ -111,9 +111,9 @@ def main(args):
 
     # Evaluate the performance of the model before dynamic quantization
     print('*'*50)
-    evaluate_model(args, model, train_loader)
+    evaluate_model(args, model, train_loader, args.device)
     print('*'*50)
-    evaluate_model(args, model, valid_loader)
+    evaluate_model(args, model, valid_loader, args.device)
     print('*'*50)
 
     model.to('cpu')  # Move the model to CPU for quantization
@@ -130,11 +130,11 @@ def main(args):
     torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
     # torch.save(quantized_model.state_dict(), quantized_model_path)
 
-    quantized_model.to(args.device)
+    quantized_model.to('cpu')
     print('*'*50)
-    evaluate_model(args, quantized_model, train_loader)
+    evaluate_model(args, quantized_model, train_loader, 'cpu')
     print('*'*50)
-    evaluate_model(args, quantized_model, valid_loader)
+    evaluate_model(args, quantized_model, valid_loader, 'cpu')
     print('*'*50)
 
 def argparser():
