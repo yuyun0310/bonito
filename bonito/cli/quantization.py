@@ -21,8 +21,7 @@ def convert_to_quantizable_layer(module):
     elif isinstance(module, nn.modules.rnn.LSTM):
         print("in 3")
         mod = quant_nn.QuantLSTM(module.input_size, module.hidden_size, module.num_layers, module.bias,
-                                 module.batch_first, module.dropout, module.bidirectional, module.proj_size, module.device,
-                                 module.dtype)
+                                 module.batch_first, module.dropout, module.bidirectional, module.proj_size)
     
     for name, child in module.named_children():
         mod.add_module(name, convert_to_quantizable_layer(child))
