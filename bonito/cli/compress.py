@@ -53,6 +53,8 @@ def model_dequantization(quantized_model, original_model):
 def evaluate_model_quant(args, model, dequant_model, dataloader, device):
     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
 
+    model = model.to('cpu')
+
     seqs = []
     t0 = time.perf_counter()
     targets = []
@@ -61,24 +63,11 @@ def evaluate_model_quant(args, model, dequant_model, dataloader, device):
         for data, target, *_ in dataloader:
             targets.extend(torch.unbind(target, 0))
             data = data.to('cpu')
-            model = model.to('cpu')
 
             log_probs = model(data)
-            # print(type(log_probs))
-            # print(log_probs.shape)
 
-            # print("%" * 50)
-
-            # log_probs = dequant_model(data)
-            # print(type(log_probs))
-            # print(log_probs.shape)
-
-            # print("%" * 50)
-
-            # model.to('cuda')
-            # log_probs.to('cuda')
-            dequant_model = dequant_model.to('cuda')
             log_probs = log_probs.to('cuda')
+            dequant_model = dequant_model.to('cuda')
 
             if hasattr(dequant_model, 'decode_batch'):
                 seqs.extend(dequant_model.decode_batch(log_probs))
@@ -98,6 +87,8 @@ def evaluate_model_quant(args, model, dequant_model, dataloader, device):
 def evaluate_model(args, model, dataloader, device):
     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
 
+    model = model.to('cpu')
+
     seqs = []
     t0 = time.perf_counter()
     targets = []
@@ -105,12 +96,13 @@ def evaluate_model(args, model, dataloader, device):
     with torch.no_grad():
         for data, target, *_ in dataloader:
             targets.extend(torch.unbind(target, 0))
-            data = data.to(device)
+            
+            data = data.to('cpu')
 
             log_probs = model(data)
 
-            # model.to('cuda')
-            # log_probs.to('cuda')
+            log_probs = log_probs.to('cuda')
+            model = model.to('cuda')
 
             if hasattr(model, 'decode_batch'):
                 seqs.extend(model.decode_batch(log_probs))
@@ -227,9 +219,9 @@ def main(args):
 
     print('*'*50)
     print("in evaluation")
-    evaluate_model_quant(args, quantized_model, model, valid_loader, args.device)
-    print('*'*50)
     evaluate_model_quant(args, quantized_model, model, train_loader, args.device)
+    print('*'*50)
+    evaluate_model_quant(args, quantized_model, model, valid_loader, args.device)
     print('*'*50)
 
 def argparser():
