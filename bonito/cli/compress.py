@@ -63,6 +63,16 @@ def evaluate_model_quant(args, model, dequant_model, dataloader, device):
             data = data.to('cpu')
 
             log_probs = model(data)
+            print(type(log_probs))
+            print(log_probs)
+
+            print("%" * 50)
+
+            log_probs = dequant_model(data)
+            print(type(log_probs))
+            print(log_probs)
+
+            print("%" * 50)
 
             # model.to('cuda')
             # log_probs.to('cuda')
