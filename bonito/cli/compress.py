@@ -251,6 +251,8 @@ def main(args):
     trainer.fit(workdir, args.epochs, lr)
 
     quantized_model_retrained = trainer.model
+
+    quantized_model_retrained.eval()
     print(quantized_model_retrained)
 
     for name, param in quantized_model_retrained.named_parameters():
