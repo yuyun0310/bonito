@@ -219,6 +219,9 @@ def main(args):
     else:
         model = load_symbol(config, 'Model')(config)
 
+    model.to('cpu')
+    model.eval()
+
     print('*'*50)
     print("in evaluation")
     evaluate_model_quant(args, quantized_model, model, valid_loader, args.device)
