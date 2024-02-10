@@ -1,0 +1,43 @@
+Model(
+  (encoder): Serial(
+    (0): Convolution(
+      (conv): Conv1d(1, 4, kernel_size=(5,), stride=(1,), padding=(2,))
+      (activation): Swish()
+    )
+    (1): Convolution(
+      (conv): Conv1d(4, 16, kernel_size=(5,), stride=(1,), padding=(2,))
+      (activation): Swish()
+    )
+    (2): Convolution(
+      (conv): Conv1d(16, 128, kernel_size=(19,), stride=(5,), padding=(9,))
+      (activation): Swish()
+    )
+    (3): Permute(dims=[2, 0, 1])
+    (4): LSTM(
+      reverse=True
+      (rnn): LSTM(128, 128)
+    )
+    (5): LSTM(
+      reverse=False
+      (rnn): LSTM(128, 128)
+    )
+    (6): LSTM(
+      reverse=True
+      (rnn): LSTM(128, 128)
+    )
+    (7): LSTM(
+      reverse=False
+      (rnn): LSTM(128, 128)
+    )
+    (8): LSTM(
+      reverse=True
+      (rnn): LSTM(128, 128)
+    )
+    (9): LinearCRFEncoder(
+      n_base=4, state_len=3, scale=5.0, blank_score=2.0, expand_blanks=True
+      (linear): Linear(in_features=128, out_features=256, bias=True)
+      (activation): Tanh()
+    )
+  )
+)
+Total parameters in model 732904
