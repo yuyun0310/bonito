@@ -23,6 +23,13 @@ def convert_to_quantizable_layer(module):
     return mod
 
 def convert_to_quantizable_model(pretrained_model):
+    for name, module in pretrained_model.named_modules():
+        print(f"{name}: {type(module).__name__}")
+
+        
     quant_modules.initialize()
     quantized_model = convert_to_quantizable_layer(pretrained_model)
+
+    for name, module in pretrained_model.named_modules():
+        print(f"{name}: {type(module).__name__}")
     return quantized_model
