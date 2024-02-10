@@ -26,8 +26,7 @@ from torch.quantization import quantize_dynamic
 import torch.nn as nn
 
 from pytorch_quantization import quant_modules
-from pytorch_quantization.nn import QuantLinear, QuantLSTM
-from pytorch_quantization import calib
+from pytorch_quantization.tensor_quant import QuantDescriptor
 
 def evaluate_model(args, model, dataloader, device):
     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
@@ -91,20 +90,20 @@ def evaluate_model(args, model, dataloader, device):
 #     print("* time      %.2f" % duration)
 #     print("* samples/s %.2E" % (len(data) * data.shape[2] / duration))
 
-# For pytorch-quantization, you might need to manually replace layers
-def replace_layers(model):
-    for name, module in model.named_children():
-        if isinstance(module, torch.nn.Linear):
-            quant_layer = QuantLinear(module.in_features, module.out_features, bias=module.bias is not None)
-            quant_layer.weight = module.weight
-            quant_layer.bias = module.bias
-            setattr(model, name, quant_layer)
-        elif isinstance(module, torch.nn.LSTM):
-            # Similar process for LSTM, but ensure you handle the complexities of LSTM layers
-            # This is a simplification, and you might need a more detailed conversion
-            setattr(model, name, QuantLSTM(module))  # This is a placeholder, adjust as needed
-        else:
-            replace_layers(module)
+# # For pytorch-quantization, you might need to manually replace layers
+# def replace_layers(model):
+#     for name, module in model.named_children():
+#         if isinstance(module, torch.nn.Linear):
+#             quant_layer = QuantLinear(module.in_features, module.out_features, bias=module.bias is not None)
+#             quant_layer.weight = module.weight
+#             quant_layer.bias = module.bias
+#             setattr(model, name, quant_layer)
+#         elif isinstance(module, torch.nn.LSTM):
+#             # Similar process for LSTM, but ensure you handle the complexities of LSTM layers
+#             # This is a simplification, and you might need a more detailed conversion
+#             setattr(model, name, QuantLSTM(module))  # This is a placeholder, adjust as needed
+#         else:
+#             replace_layers(module)
 
 def main(args):
 
@@ -137,6 +136,10 @@ def main(args):
         model = load_model(args.pretrained, device, half=False)
     else:
         model = load_symbol(config, 'Model')(config)
+
+    # optimizer = AdamW(model.parameters(), amsgrad=False, lr=args.lr)
+    # torch.save(model.state_dict(), os.path.join(workdir, "weights.orig.tar"))
+    # criterion = model.seqdist.ctc_loss if hasattr(model, 'seqdist') else None
 
     print("[loading data]")
     try:
@@ -192,8 +195,16 @@ def main(args):
     #     quantized_model = load_symbol(config, 'Model')(config)
 
     # model = MyCustomModel(input_size, hidden_size, output_size)
-    replace_layers(quantized_model)
-    quantized_model = quantized_model.to(args.device)
+    # replace_layers(quantized_model)
+    # quantized_model = quantized_model.to(args.device)
+
+    # Enable quantization for the entire model
+    quant_modules.initialize()
+
+    # Customize quantization configurations if necessary
+    quant_desc_input = QuantDescriptor(calib_method='histogram')
+    quant_modules.quantize_dynamic(model, qconfig_dict={'input': quant_desc_input, 'weight': quant_desc_input})
+    model.cuda()
 
     # quantized_model.to('cpu')
     print('*'*50)
