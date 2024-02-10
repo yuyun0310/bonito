@@ -29,6 +29,13 @@ import torch.nn as nn
 import copy
 
 def model_dequantization(quantized_model, original_model):
+    print("Original Model Keys:")
+    for key in original_model.state_dict().keys():
+        print(key)
+
+    print("\nQuantized Model Keys:")
+    for key in quantized_model.state_dict().keys():
+        print(key)
     with torch.no_grad():
         for name, quantized_weight in quantized_model.state_dict().items():
             if "weight" in name or "bias" in name:
