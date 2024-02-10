@@ -7,7 +7,9 @@ def convert_to_quantizable_layer(module):
     """
     Recursively convert supported layers to their quantizable versions.
     """
-    print(module)
+    print("#"*50)
+    print(type(module), module)
+    print("#"*50)
     mod = module
     if isinstance(module, nn.Conv1d):
         print("in 1")
