@@ -97,7 +97,7 @@ def evaluate_model(args, model, dataloader, device):
             
             data = data.to('cpu')
             model = model.to('cpu')
-            
+
             log_probs = model(data)
 
             log_probs = log_probs.to('cuda')
@@ -117,6 +117,37 @@ def evaluate_model(args, model, dataloader, device):
     print("* median    %.2f%%" % np.median(accuracies))
     print("* time      %.2f" % duration)
     print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
+
+def time_evaluation(args, model, dataloader):
+    """
+        time evaluate: both use cpu
+    """
+
+    t0 = time.perf_counter()
+
+    with torch.no_grad():
+        for data, target, *_ in dataloader:
+            
+            data = data.to('cpu')
+            model = model.to('cpu')
+
+            log_probs = model(data)
+
+            log_probs = log_probs.to('cuda')
+            model = model.to('cuda')
+
+    duration = time.perf_counter() - t0
+
+    print("* time      %.2f" % duration)
+    print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
+
+
+""""
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+print parameter number!!!!
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+"""
 
 def main(args):
 
@@ -190,6 +221,7 @@ def main(args):
         print(key)
 
     model.to('cpu')  # Move the model to CPU for quantization
+    print(type(model), model.seqdist)
 
     # Apply dynamic quantization to the LSTM and linear layers
     quantized_model = quantize_dynamic(
@@ -201,6 +233,8 @@ def main(args):
     torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
 
     quantized_model.eval()
+
+    print(type(quantized_model), quantized_model.seqdist)
 
     # # Prepare for evaluation
     # model_copy = copy.deepcopy(model)
