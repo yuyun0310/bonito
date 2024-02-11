@@ -222,25 +222,19 @@ def main(args):
 
     model.to('cpu')  # Move the model to CPU for quantization
     print(type(model), model.seqdist)
-    print(model.seqdist.alphabet)
-    print(model.config)
 
-    # # Apply dynamic quantization to the LSTM and linear layers
-    # quantized_model = quantize_dynamic(
-    #     model,
-    #     {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
-    #     dtype=torch.qint8  # Use 8-bit integer quantization
-    # )
+    # Apply dynamic quantization to the LSTM and linear layers
+    quantized_model = quantize_dynamic(
+        model,
+        {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
+        dtype=torch.qint8  # Use 8-bit integer quantization
+    )
     
-    # torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
+    torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
 
-    quantized_model = copy.deepcopy(model)
-    quantized_model.config['quantize'] = True
     quantized_model.eval()
 
     print(type(quantized_model), quantized_model.seqdist)
-    print(quantized_model.seqdist.alphabet)
-    print(quantized_model.config)
 
     # # Prepare for evaluation
     # model_copy = copy.deepcopy(model)
@@ -261,6 +255,22 @@ def main(args):
     # evaluate_model_quant(args, quantized_model, model, train_loader, args.device)
     # print('*'*50)
     evaluate_model_quant(args, quantized_model, model, valid_loader, args.device)
+    print('*'*50)
+
+    if args.pretrained:
+        print("[using pretrained model {}]".format(args.pretrained))
+        model = load_model(args.pretrained, device, half=False, quantize=True, use_koi=True)
+    else:
+        model = load_symbol(config, 'Model')(config)
+
+    model.to('cpu')
+    model.eval()
+
+    print('*'*50)
+    # print("in evaluation")
+    # evaluate_model_quant(args, quantized_model, model, train_loader, args.device)
+    # print('*'*50)
+    evaluate_model(args, model, valid_loader, args.device)
     print('*'*50)
 
 def argparser():
