@@ -304,7 +304,7 @@ def main(args):
     # print("in evaluation")
     # evaluate_model_quant(args, quantized_model, model, train_loader, args.device)
     # print('*'*50)
-    evaluate_model(args, model, valid_loader, args.device)
+    evaluate_model_auto(args, model, valid_loader, args.device)
     print('*'*50)
 
 def argparser():
