@@ -14,7 +14,7 @@ from importlib import import_module
 
 from bonito.data import load_numpy, load_script
 from bonito.util import __models__, default_config, default_data
-from bonito.util import load_model, load_symbol, init, half_supported, accuracy, permute, decode_ref
+from bonito.util import load_model, load_symbol, init, half_supported, accuracy, permute, decode_ref, get_parameters_count
 from bonito.training import load_state, Trainer
 
 import time
@@ -265,6 +265,8 @@ def main(args):
     )
     
     torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
+    torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model_config.toml"))
+    toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
 
     quantized_model.eval()
 
@@ -296,21 +298,10 @@ def main(args):
     print("Size of Model 1:", size_model1, "bytes")
     print("Size of Model 2:", size_model2, "bytes")
 
-    # if args.pretrained:
-    #     print("[using pretrained model {}]".format(args.pretrained))
-    #     model = load_model(args.pretrained, device, half=True, quantize=True, use_koi=True)
-    # else:
-    #     model = load_symbol(config, 'Model')(config)
-
-    # model.to('cpu')
-    # model.eval()
-
-    # print('*'*50)
-    # # print("in evaluation")
-    # # evaluate_model_quant(args, quantized_model, model, train_loader, args.device)
-    # # print('*'*50)
-    # evaluate_model_auto(args, model, valid_loader, args.device)
-    # print('*'*50)
+    params_model1 = get_parameters_count(model)
+    params_model2 = get_parameters_count(quantized_model)
+    print("Params of Model 1:", params_model1)
+    print("Params of Model 2:", params_model2)
 
 def argparser():
     parser = ArgumentParser(
@@ -325,7 +316,7 @@ def argparser():
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--lr", default='2e-3')
     parser.add_argument("--seed", default=25, type=int)
-    parser.add_argument("--epochs", default=1, type=int)
+    parser.add_argument("--epochs", default=5, type=int)
     parser.add_argument("--batch", default=64, type=int)
     parser.add_argument("--chunks", default=0, type=int)
     parser.add_argument("--valid-chunks", default=1000, type=int)
