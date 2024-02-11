@@ -87,8 +87,6 @@ def evaluate_model_quant(args, model, dequant_model, dataloader, device):
 def evaluate_model(args, model, dataloader, device):
     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
 
-    model = model.to('cpu')
-
     seqs = []
     t0 = time.perf_counter()
     targets = []
@@ -98,7 +96,8 @@ def evaluate_model(args, model, dataloader, device):
             targets.extend(torch.unbind(target, 0))
             
             data = data.to('cpu')
-
+            model = model.to('cpu')
+            
             log_probs = model(data)
 
             log_probs = log_probs.to('cuda')
