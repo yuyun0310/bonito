@@ -225,15 +225,17 @@ def main(args):
     print(model.seqdist.alphabet)
     print(model.config)
 
-    # Apply dynamic quantization to the LSTM and linear layers
-    quantized_model = quantize_dynamic(
-        model,
-        {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
-        dtype=torch.qint8  # Use 8-bit integer quantization
-    )
+    # # Apply dynamic quantization to the LSTM and linear layers
+    # quantized_model = quantize_dynamic(
+    #     model,
+    #     {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
+    #     dtype=torch.qint8  # Use 8-bit integer quantization
+    # )
     
-    torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
+    # torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
 
+    quantized_model = copy.deepcopy(model)
+    quantized_model.config['quantize'] = True
     quantized_model.eval()
 
     print(type(quantized_model), quantized_model.seqdist)
