@@ -118,39 +118,39 @@ def evaluate_model(args, model, dataloader, device):
     print("* time      %.2f" % duration)
     print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
 
-def evaluate_model_auto(args, model, dataloader, device):
-    accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
+# def evaluate_model_auto(args, model, dataloader, device):
+#     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
 
-    seqs = []
-    t0 = time.perf_counter()
-    targets = []
+#     seqs = []
+#     t0 = time.perf_counter()
+#     targets = []
 
-    with torch.no_grad():
-        for data, target, *_ in dataloader:
-            targets.extend(torch.unbind(target, 0))
-            data = data.half()
-            data = data.to('cpu')
-            model = model.to('cpu')
+#     with torch.no_grad():
+#         for data, target, *_ in dataloader:
+#             targets.extend(torch.unbind(target, 0))
+#             data = data.half()
+#             data = data.to('cpu')
+#             model = model.to('cpu')
 
-            log_probs = model(data)
+#             log_probs = model(data)
 
-            log_probs = log_probs.to('cuda')
-            model = model.to('cuda')
+#             log_probs = log_probs.to('cuda')
+#             model = model.to('cuda')
 
-            if hasattr(model, 'decode_batch'):
-                seqs.extend(model.decode_batch(log_probs))
-            else:
-                seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
+#             if hasattr(model, 'decode_batch'):
+#                 seqs.extend(model.decode_batch(log_probs))
+#             else:
+#                 seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
 
-    duration = time.perf_counter() - t0
+#     duration = time.perf_counter() - t0
 
-    refs = [decode_ref(target, model.alphabet) for target in targets]
-    accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
+#     refs = [decode_ref(target, model.alphabet) for target in targets]
+#     accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
 
-    print("* mean      %.2f%%" % np.mean(accuracies))
-    print("* median    %.2f%%" % np.median(accuracies))
-    print("* time      %.2f" % duration)
-    print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
+#     print("* mean      %.2f%%" % np.mean(accuracies))
+#     print("* median    %.2f%%" % np.median(accuracies))
+#     print("* time      %.2f" % duration)
+#     print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
 
 def time_evaluation(args, model, dataloader):
     """
@@ -291,21 +291,26 @@ def main(args):
     evaluate_model_quant(args, quantized_model, model, valid_loader, args.device)
     print('*'*50)
 
-    if args.pretrained:
-        print("[using pretrained model {}]".format(args.pretrained))
-        model = load_model(args.pretrained, device, half=True, quantize=True, use_koi=True)
-    else:
-        model = load_symbol(config, 'Model')(config)
+    size_model1 = os.path.getsize(os.path.join(workdir, "origin.tar"))
+    size_model2 = os.path.getsize(os.path.join(workdir, "quantized_model.tar"))
+    print("Size of Model 1:", size_model1, "bytes")
+    print("Size of Model 2:", size_model2, "bytes")
 
-    model.to('cpu')
-    model.eval()
+    # if args.pretrained:
+    #     print("[using pretrained model {}]".format(args.pretrained))
+    #     model = load_model(args.pretrained, device, half=True, quantize=True, use_koi=True)
+    # else:
+    #     model = load_symbol(config, 'Model')(config)
 
-    print('*'*50)
-    # print("in evaluation")
-    # evaluate_model_quant(args, quantized_model, model, train_loader, args.device)
+    # model.to('cpu')
+    # model.eval()
+
     # print('*'*50)
-    evaluate_model_auto(args, model, valid_loader, args.device)
-    print('*'*50)
+    # # print("in evaluation")
+    # # evaluate_model_quant(args, quantized_model, model, train_loader, args.device)
+    # # print('*'*50)
+    # evaluate_model_auto(args, model, valid_loader, args.device)
+    # print('*'*50)
 
 def argparser():
     parser = ArgumentParser(
