@@ -259,7 +259,7 @@ def main(args):
 
     if args.pretrained:
         print("[using pretrained model {}]".format(args.pretrained))
-        model = load_model(args.pretrained, device, half=False, quantize=True, use_koi=True)
+        model = load_model(args.pretrained, device, half=True, quantize=True, use_koi=True)
     else:
         model = load_symbol(config, 'Model')(config)
 
