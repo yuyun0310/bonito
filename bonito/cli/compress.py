@@ -250,12 +250,11 @@ def main(args):
     evaluate_model(args, model, valid_loader, args.device)
     print('*'*50)
 
+    model.to('cpu')  # Move the model to CPU for quantization
+    print(type(model), model.seqdist)
     print("Original Model Keys:")
     for key in model.state_dict().keys():
         print(key)
-
-    model.to('cpu')  # Move the model to CPU for quantization
-    print(type(model), model.seqdist)
 
     # Apply dynamic quantization to the LSTM and linear layers
     quantized_model = quantize_dynamic(
@@ -271,6 +270,9 @@ def main(args):
     quantized_model.eval()
 
     print(type(quantized_model), quantized_model.seqdist)
+    print("\nQuantized Model Keys:")
+    for key in quantized_model.state_dict().keys():
+        print(key)
 
     # # Prepare for evaluation
     # model_copy = copy.deepcopy(model)
