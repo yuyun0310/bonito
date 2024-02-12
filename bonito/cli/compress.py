@@ -252,6 +252,8 @@ def main(args):
 
     model.to('cpu')  # Move the model to CPU for quantization
     print(type(model), model.seqdist)
+    print(model.seqdist.n_base, model.seqdist.state_len, model.seqdist.alphabet)
+    print(model.config)
     print("Original Model Keys:")
     for key in model.state_dict().keys():
         print(key)
@@ -270,6 +272,8 @@ def main(args):
     quantized_model.eval()
 
     print(type(quantized_model), quantized_model.seqdist)
+    print(quantized_model.seqdist.n_base, quantized_model.seqdist.state_len, quantized_model.seqdist.alphabet)
+    print(quantized_model.config)
     print("\nQuantized Model Keys:")
     for key in quantized_model.state_dict().keys():
         print(key)
