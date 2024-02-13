@@ -32,7 +32,7 @@ def main(args):
         print("[error] %s exists, use -f to force continue training." % workdir)
         exit(1)
 
-    if args.device == 'cpu' and (not args.compare_time or args.quantized is None or not args.evaluate):
+    if args.device == 'cpu' and (not args.compare_time or not args.evaluate):
         print("[error] only evaluate time spent for models before and after qantization")
         exit(1)
 
@@ -92,22 +92,18 @@ def main(args):
     '''
     Quantization
     '''
-    if not args.evaluate:
-        print("[quantize pre-trained model]")
+    print("[quantize pre-trained model]")
 
-        model.to('cpu')  # Move the model to CPU for quantization
+    model.to('cpu')  # Move the model to CPU for quantization
 
-        # Apply dynamic quantization to the LSTM and linear layers
-        quantized_model = quantize_dynamic(
-            model,
-            {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
-            dtype=torch.qint8  # Use 8-bit integer quantization
-        )
-        model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
-        torch.save(model_state, os.path.join(workdir, "weights_quant.tar"))
-    else:
-        print('[load quantized model]')
-        quantized_model = load_model(args.quantized, device, half=False, weights='quant')
+    # Apply dynamic quantization to the LSTM and linear layers
+    quantized_model = quantize_dynamic(
+        model,
+        {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
+        dtype=torch.qint8  # Use 8-bit integer quantization
+    )
+    model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
+    torch.save(model_state, os.path.join(workdir, "weights_quant.tar"))
 
     '''
     Evaluation
@@ -170,7 +166,7 @@ def argparser():
     parser.add_argument("--grad-accum-split", default=1, type=int)
     parser.add_argument("--quantile-grad-clip", action="store_true", default=False)
     parser.add_argument('--compare_time', default=False) # compare time spent for prediction before and after quantization (must be on CPU)
-    parser.add_argument('--quantized', default=None, type=Path) # If compare_time is True, then give the path to quantized model as well.
+    # parser.add_argument('--quantized', default=None, type=Path) # If compare_time is True, then give the path to quantized model as well.
     parser.add_argument('--evaluate', default=False) # If only want to evaluate
 
     return parser
