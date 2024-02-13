@@ -121,9 +121,10 @@ def main(args):
         torch.quantization.prepare(model, inplace=True)
 
         # Assuming calibration_dataset is a DataLoader object providing input tensors
-        for inputs in train_loader:
-            inputs = inputs.to('cuda')
-            model(inputs)
+        with torch.no_grad():
+            for data, *_ in train_loader:
+                data = data.to('cpu')
+                model(data)
 
         model.to('cpu')
         quantized_model = torch.quantization.convert(model, inplace=True)
@@ -194,7 +195,7 @@ def argparser():
     # parser.add_argument('--quantized', default=None, type=Path) # If compare_time is True, then give the path to quantized model as well.
     parser.add_argument('--evaluate', default=False) # If only want to evaluate
     group_method = parser.add_mutually_exclusive_group()
-    group_method.add_argument('--dynamic')
-    group_method.add_argument('--static')
+    group_method.add_argument("--dynamic", action="store_true", default=False)
+    group_method.add_argument("--static", action="store_true", default=False)
 
     return parser
