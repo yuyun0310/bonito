@@ -5,7 +5,7 @@ import toml
 import numpy as np
 from bonito.util import accuracy, decode_ref, permute, get_parameters_count
 
-def model_structure_comparison(model1, model2, report_file='model_comparison_report.txt'):
+def model_structure_comparison(model1, model2, workdir, report_file='model_comparison_report.txt'):
     '''
     The purpose of ths function is to check validity of evaluation method adopted.
     
@@ -19,7 +19,7 @@ def model_structure_comparison(model1, model2, report_file='model_comparison_rep
     exactly from 2 models (before and after quantization), and this can be launched purely
     on CPU.
     '''
-    with open(report_file, 'w') as f:
+    with open(os.path.join(workdir, report_file), 'w') as f:
         def write_both(message):
             print(message)
             f.write(message + '\n')
@@ -51,7 +51,7 @@ def model_structure_comparison(model1, model2, report_file='model_comparison_rep
 
 def evaluate_accuracy(args, model, dataloader, dequant_model=None):
     model.eval()
-    
+
     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
 
     seqs = []

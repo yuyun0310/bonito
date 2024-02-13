@@ -117,14 +117,18 @@ def main(args):
 
     if args.device == 'cuda':
         print("[compare model accuracy before and after quantization]")
+        print("Before:")
         evaluate_accuracy(args, model, valid_loader)
+        print()
+        print("After:")
         evaluate_accuracy(args, quantized_model, valid_loader, model)
+        print("Before:")
 
         print("[compare model size before and after quantization]")
         evaluate_model_storage_compression_rate("weights.orig.tar", "weights.quant.tar", workdir)
 
         print("[compare model structure before and after quantization]")
-        model_structure_comparison(model, quantized_model)
+        model_structure_comparison(model, quantized_model, workdir)
 
     '''
     Evaluate time
@@ -133,8 +137,13 @@ def main(args):
         print(['evaluate time on CPU'])
     else:
         print(['evaluate time on GPU'])
+
+    print("Before:")
     evaluate_time_cpu(args, model, valid_loader)
+    print()
+    print("After:")
     evaluate_time_cpu(args, quantized_model, valid_loader)
+    print()
 
 def argparser():
     parser = ArgumentParser(
