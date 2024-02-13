@@ -15,9 +15,9 @@ class QuantizedModelWrapper(torch.nn.Module):
 
     def forward(self, x):
         x = self.quant(x)
-        x = self.model(x)
-        x = self.dequant(x)
-        return x
+        y = self.model(x)
+        y = self.dequant(y)
+        return y
 
 def static_quantization_wrapper(model):
     wrapped_model = QuantizedModelWrapper(model)
