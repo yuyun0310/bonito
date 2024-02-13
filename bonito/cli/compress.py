@@ -123,7 +123,7 @@ def main(args):
         
         # Custom QConfig to quantize weights only and not activations
         weight_only_qconfig = QConfig(
-            activation=torch.quantization.FakeQuantize.with_args(observer=default_observer, quant_min=0, quant_max=0, dtype=torch.quint8),
+            activation=torch.quantization.FakeQuantize.with_args(observer=default_observer, quant_min=0, quant_max=255, dtype=torch.quint8),
             weight=default_weight_observer
         )
 
