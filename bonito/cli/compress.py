@@ -101,14 +101,34 @@ def main(args):
 
     model.to('cpu')  # Move the model to CPU for quantization
 
-    # Apply dynamic quantization to the LSTM and linear layers
-    quantized_model = quantize_dynamic(
-        model,
-        {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
-        dtype=torch.qint8  # Use 8-bit integer quantization
-    )
-    model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
-    torch.save(model_state, os.path.join(workdir, "weights_quant.tar"))
+    if args.dynamic:
+        # Apply dynamic quantization to the LSTM and linear layers
+        quantized_model = quantize_dynamic(
+            model,
+            {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
+            dtype=torch.qint8  # Use 8-bit integer quantization
+        )
+        model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
+        torch.save(model_state, os.path.join(workdir, "weights_quant_dynamic.tar"))
+    elif args.static:
+        model.to('cuda')
+
+        # Set the model to evaluation mode
+        model.eval()
+
+        # Specify the layers to be quantized
+        model.qconfig = torch.quantization.get_default_qconfig('fbgemm')
+        torch.quantization.prepare(model, inplace=True)
+
+        # Assuming calibration_dataset is a DataLoader object providing input tensors
+        for inputs in train_loader:
+            inputs = inputs.to('cuda')
+            model(inputs)
+
+        model.to('cpu')
+        quantized_model = torch.quantization.convert(model, inplace=True)
+        model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
+        torch.save(model_state, os.path.join(workdir, "weights_quant_static.tar"))
 
     '''
     Evaluation
@@ -126,7 +146,7 @@ def main(args):
         print("Before:")
 
         print("[compare model size before and after quantization]")
-        evaluate_model_storage_compression_rate("weights_orig.tar", "weights_quant.tar", workdir)
+        evaluate_model_storage_compression_rate("weights_orig.tar", "weights_quant_dynamic.tar", workdir)
 
         print("[compare model structure before and after quantization]")
         model_structure_comparison(model, quantized_model, workdir)
@@ -173,5 +193,8 @@ def argparser():
     parser.add_argument('--compare_time', default=False) # compare time spent for prediction before and after quantization (must be on CPU)
     # parser.add_argument('--quantized', default=None, type=Path) # If compare_time is True, then give the path to quantized model as well.
     parser.add_argument('--evaluate', default=False) # If only want to evaluate
+    group_method = parser.add_mutually_exclusive_group()
+    group_method.add_argument('--dynamic')
+    group_method.add_argument('--static')
 
     return parser
