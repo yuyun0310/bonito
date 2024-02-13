@@ -25,6 +25,8 @@ from torch.quantization import quantize_dynamic
 def main(args):
     current_backend = torch.backends.quantized.engine
     print(f"Current quantization backend: {current_backend}")
+    torch.backends.quantized.engine = 'fbgemm'
+    print(f"Quantization backend set to: {torch.backends.quantized.engine}")
     '''
     Prepare: workdir, device, load pretrained model, load dataset
     '''
