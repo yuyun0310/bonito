@@ -113,6 +113,7 @@ def main(args):
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_dynamic.tar"))
     elif args.static:
+        model_copy = static_quantization_wrapper(model_copy)
         model_copy.to('cuda')
 
         # Set the model to evaluation mode
@@ -130,7 +131,6 @@ def main(args):
 
         model_copy.to('cpu')
         quantized_model = torch.quantization.convert(model_copy, inplace=True)
-        quantized_model = static_quantization_wrapper(quantized_model)
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_static.tar"))
 
