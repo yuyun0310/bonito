@@ -103,8 +103,8 @@ def main(args):
             {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
             dtype=torch.qint8  # Use 8-bit integer quantization
         )
-        
-        torch.save(quantized_model.state_dict(), os.path.join(workdir, "weights_quant.tar"))
+        model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
+        torch.save(model_state, os.path.join(workdir, "weights_quant.tar"))
     else:
         print('[load quantized model]')
         quantized_model = load_model(args.quantized, device, half=False, weights='quant')
