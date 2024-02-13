@@ -13,7 +13,7 @@ from pathlib import Path
 from bonito.data import load_numpy, load_script
 from bonito.util import __models__, default_config
 from bonito.util import load_model, load_symbol, init
-from bonito.cli.quantization import model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_storage_compression_rate, save_quantized_model
+from bonito.cli.quantization import model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_storage_compression_rate, save_quantized_model, static_quantization_wrapper
 
 import toml
 import torch
@@ -128,6 +128,7 @@ def main(args):
 
         model.to('cpu')
         quantized_model = torch.quantization.convert(model, inplace=True)
+        quantized_model = static_quantization_wrapper(quantized_model)
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_static.tar"))
 
