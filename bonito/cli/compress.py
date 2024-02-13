@@ -20,8 +20,11 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from torch.quantization import quantize_dynamic
+# from memory_profiler import memory_usage
 
 def main(args):
+    current_backend = torch.backends.quantized.engine
+    print(f"Current quantization backend: {current_backend}")
     '''
     Prepare: workdir, device, load pretrained model, load dataset
     '''
