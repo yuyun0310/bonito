@@ -123,7 +123,7 @@ def main(args):
         # Assuming calibration_dataset is a DataLoader object providing input tensors
         with torch.no_grad():
             for data, *_ in train_loader:
-                data = data.to('cpu')
+                data = data.to('cuda')
                 model(data)
 
         model.to('cpu')
