@@ -4,193 +4,39 @@
 Bonito model compression.
 """
 
+from ast import arg
 import os
-import sys
-
 from argparse import ArgumentParser
 from argparse import ArgumentDefaultsHelpFormatter
 from pathlib import Path
-from importlib import import_module
 
 from bonito.data import load_numpy, load_script
-from bonito.util import __models__, default_config, default_data
-from bonito.util import load_model, load_symbol, init, half_supported, accuracy, permute, decode_ref, get_parameters_count
-from bonito.training import load_state, Trainer
+from bonito.util import __models__, default_config
+from bonito.util import load_model, load_symbol, init
+from bonito.cli.quantization import model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_storage_compression_rate, save_quantized_model
 
-import time
 import toml
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
-from torch.nn import LSTM
-from torch.optim import AdamW
 from torch.quantization import quantize_dynamic
-import torch.nn as nn
-import copy
-
-def model_dequantization(quantized_model, original_model):
-    print("Original Model Keys:")
-    for key in original_model.state_dict().keys():
-        print(key)
-
-    print("\nQuantized Model Keys:")
-    for key in quantized_model.state_dict().keys():
-        print(key)
-    # with torch.no_grad():
-    #     for name, quantized_weight in quantized_model.state_dict().items():
-    #         if "weight" in name or "bias" in name:
-    #             # Directly copy the data for compatible parameters
-    #             original_model.state_dict()[name].copy_(quantized_weight)
-        
-    with torch.no_grad():
-        for name, param in original_model.named_parameters():
-            if 'conv' in name or 'linear' in name:
-                quantized_param = quantized_model.state_dict()[name]
-                param.copy_(quantized_param)
-
-    return original_model
-
-def evaluate_model_quant(args, model, dequant_model, dataloader, device):
-    accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
-
-    model = model.to('cpu')
-
-    seqs = []
-    t0 = time.perf_counter()
-    targets = []
-
-    with torch.no_grad():
-        for data, target, *_ in dataloader:
-            targets.extend(torch.unbind(target, 0))
-            data = data.to('cpu')
-
-            log_probs = model(data)
-
-            log_probs = log_probs.to('cuda')
-            dequant_model = dequant_model.to('cuda')
-
-            if hasattr(dequant_model, 'decode_batch'):
-                seqs.extend(dequant_model.decode_batch(log_probs))
-            else:
-                seqs.extend([dequant_model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
-
-    duration = time.perf_counter() - t0
-
-    refs = [decode_ref(target, dequant_model.alphabet) for target in targets]
-    accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
-
-    print("* mean      %.2f%%" % np.mean(accuracies))
-    print("* median    %.2f%%" % np.median(accuracies))
-    print("* time      %.2f" % duration)
-    print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
-
-def evaluate_model(args, model, dataloader, device):
-    accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
-
-    seqs = []
-    t0 = time.perf_counter()
-    targets = []
-
-    with torch.no_grad():
-        for data, target, *_ in dataloader:
-            targets.extend(torch.unbind(target, 0))
-            
-            data = data.to('cpu')
-            model = model.to('cpu')
-
-            log_probs = model(data)
-
-            log_probs = log_probs.to('cuda')
-            model = model.to('cuda')
-
-            if hasattr(model, 'decode_batch'):
-                seqs.extend(model.decode_batch(log_probs))
-            else:
-                seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
-
-    duration = time.perf_counter() - t0
-
-    refs = [decode_ref(target, model.alphabet) for target in targets]
-    accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
-
-    print("* mean      %.2f%%" % np.mean(accuracies))
-    print("* median    %.2f%%" % np.median(accuracies))
-    print("* time      %.2f" % duration)
-    print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
-
-# def evaluate_model_auto(args, model, dataloader, device):
-#     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
-
-#     seqs = []
-#     t0 = time.perf_counter()
-#     targets = []
-
-#     with torch.no_grad():
-#         for data, target, *_ in dataloader:
-#             targets.extend(torch.unbind(target, 0))
-#             data = data.half()
-#             data = data.to('cpu')
-#             model = model.to('cpu')
-
-#             log_probs = model(data)
-
-#             log_probs = log_probs.to('cuda')
-#             model = model.to('cuda')
-
-#             if hasattr(model, 'decode_batch'):
-#                 seqs.extend(model.decode_batch(log_probs))
-#             else:
-#                 seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
-
-#     duration = time.perf_counter() - t0
-
-#     refs = [decode_ref(target, model.alphabet) for target in targets]
-#     accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
-
-#     print("* mean      %.2f%%" % np.mean(accuracies))
-#     print("* median    %.2f%%" % np.median(accuracies))
-#     print("* time      %.2f" % duration)
-#     print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
-
-def time_evaluation(args, model, dataloader):
-    """
-        time evaluate: both use cpu
-    """
-
-    t0 = time.perf_counter()
-
-    with torch.no_grad():
-        for data, target, *_ in dataloader:
-            
-            data = data.to('cpu')
-            model = model.to('cpu')
-
-            log_probs = model(data)
-
-            log_probs = log_probs.to('cuda')
-            model = model.to('cuda')
-
-    duration = time.perf_counter() - t0
-
-    print("* time      %.2f" % duration)
-    print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
-
-
-""""
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-print parameter number!!!!
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-"""
 
 def main(args):
-
+    '''
+    Prepare: workdir, device, load pretrained model, load dataset
+    '''
+    # workdir creation
     workdir = os.path.expanduser(args.training_directory)
 
     if os.path.exists(workdir) and not args.force:
         print("[error] %s exists, use -f to force continue training." % workdir)
         exit(1)
 
+    if args.device == 'cpu' and (not args.compare_time or args.quantized is None or not args.evaluate):
+        print("[error] only evaluate time spent for models before and after qantization")
+        exit(1)
+
+    # device preparation
     init(args.seed, args.device, (not args.nondeterministic))
     device = torch.device(args.device)
 
@@ -206,8 +52,7 @@ def main(args):
             print(f"[ignoring 'lr_scheduler' in --pretrained config]")
             del config['lr_scheduler']
 
-    argsdict = dict(training=vars(args))
-
+    # load pre-trained model
     print("[loading model]")
     if args.pretrained:
         print("[using pretrained model {}]".format(args.pretrained))
@@ -215,9 +60,7 @@ def main(args):
     else:
         model = load_symbol(config, 'Model')(config)
 
-    for name, param in model.named_parameters():
-        print(name, param.data.dtype)
-
+    # load data
     print("[loading data]")
     try:
         train_loader_kwargs, valid_loader_kwargs = load_numpy(
@@ -239,75 +82,59 @@ def main(args):
     train_loader = DataLoader(**loader_kwargs, **train_loader_kwargs)
     valid_loader = DataLoader(**loader_kwargs, **valid_loader_kwargs)
 
-    os.makedirs(workdir, exist_ok=True)
-    toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
-    torch.save(model.state_dict(), os.path.join(workdir, "origin.tar"))
+    # save config file and original pretrained model if not just evaluate
+    if not args.evaluate:
+        os.makedirs(workdir, exist_ok=True)
+        argsdict = dict(training=vars(args))
+        toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
+        torch.save(model.state_dict(), os.path.join(workdir, "weights.orig.tar"))
 
-    # Evaluate the performance of the model before dynamic quantization
-    print('*'*50)
-    # evaluate_model(args, model, train_loader, args.device)
-    # print('*'*50)
-    evaluate_model(args, model, valid_loader, args.device)
-    print('*'*50)
+    '''
+    Quantization
+    '''
+    if not args.evaluate:
+        print("[quantize pre-trained model]")
 
-    model.to('cpu')  # Move the model to CPU for quantization
-    print(type(model), model.seqdist)
-    print(model.seqdist.n_base, model.seqdist.state_len, model.seqdist.alphabet)
-    print(model.config)
-    print("Original Model Keys:")
-    for key in model.state_dict().keys():
-        print(key)
+        model.to('cpu')  # Move the model to CPU for quantization
 
-    # Apply dynamic quantization to the LSTM and linear layers
-    quantized_model = quantize_dynamic(
-        model,
-        {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
-        dtype=torch.qint8  # Use 8-bit integer quantization
-    )
-    
-    torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model.tar"))
-    torch.save(quantized_model.state_dict(), os.path.join(workdir, "quantized_model_config.toml"))
-    toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
+        # Apply dynamic quantization to the LSTM and linear layers
+        quantized_model = quantize_dynamic(
+            model,
+            {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
+            dtype=torch.qint8  # Use 8-bit integer quantization
+        )
+        
+        torch.save(quantized_model.state_dict(), os.path.join(workdir, "weights.quant.tar"))
+    else:
+        print('[load quantized model]')
+        quantized_model = load_model(args.quantized, device, half=False)
 
+    '''
+    Evaluation
+    '''
+    model.eval()
     quantized_model.eval()
 
-    print(type(quantized_model), quantized_model.seqdist)
-    print(quantized_model.seqdist.n_base, quantized_model.seqdist.state_len, quantized_model.seqdist.alphabet)
-    print(quantized_model.config)
-    print("\nQuantized Model Keys:")
-    for key in quantized_model.state_dict().keys():
-        print(key)
+    if args.device == 'cuda':
+        print("[compare model accuracy before and after quantization]")
+        evaluate_accuracy(args, model, valid_loader)
+        evaluate_accuracy(args, quantized_model, valid_loader, model)
 
-    # # Prepare for evaluation
-    # model_copy = copy.deepcopy(model)
-    # dequantized_model = model_dequantization(quantized_model, model_copy)
-    # dequantized_model.to(args.device)
+        print("[compare model size before and after quantization]")
+        evaluate_model_storage_compression_rate("weights.orig.tar", "weights.quant.tar", workdir)
 
-    if args.pretrained:
-        print("[using pretrained model {}]".format(args.pretrained))
-        model = load_model(args.pretrained, device, half=False)
+        print("[compare model structure before and after quantization]")
+        model_structure_comparison(model, quantized_model)
+
+    '''
+    Evaluate time
+    '''
+    if args.device == 'cpu':
+        print(['evaluate time on CPU'])
     else:
-        model = load_symbol(config, 'Model')(config)
-
-    model.to('cpu')
-    model.eval()
-
-    print('*'*50)
-    # print("in evaluation")
-    # evaluate_model_quant(args, quantized_model, model, train_loader, args.device)
-    # print('*'*50)
-    evaluate_model_quant(args, quantized_model, model, valid_loader, args.device)
-    print('*'*50)
-
-    size_model1 = os.path.getsize(os.path.join(workdir, "origin.tar"))
-    size_model2 = os.path.getsize(os.path.join(workdir, "quantized_model.tar"))
-    print("Size of Model 1:", size_model1, "bytes")
-    print("Size of Model 2:", size_model2, "bytes")
-
-    params_model1 = get_parameters_count(model)
-    params_model2 = get_parameters_count(quantized_model)
-    print("Params of Model 1:", params_model1)
-    print("Params of Model 2:", params_model2)
+        print(['evaluate time on GPU'])
+    evaluate_time_cpu(args, model, valid_loader)
+    evaluate_time_cpu(args, quantized_model, valid_loader)
 
 def argparser():
     parser = ArgumentParser(
@@ -319,7 +146,7 @@ def argparser():
     group.add_argument('--config', default=default_config)
     group.add_argument('--pretrained', default='dna_r9.4.1_e8_fast@v3.4')
     parser.add_argument("--directory", type=Path)
-    parser.add_argument("--device", default="cuda")
+    parser.add_argument("--device", default="cuda") # If 'cpu' then evaluate time spent.
     parser.add_argument("--lr", default='2e-3')
     parser.add_argument("--seed", default=25, type=int)
     parser.add_argument("--epochs", default=5, type=int)
@@ -333,4 +160,8 @@ def argparser():
     parser.add_argument("--save-optim-every", default=10, type=int)
     parser.add_argument("--grad-accum-split", default=1, type=int)
     parser.add_argument("--quantile-grad-clip", action="store_true", default=False)
+    parser.add_argument('--compare_time', default=False) # compare time spent for prediction before and after quantization (must be on CPU)
+    parser.add_argument('--quantized', default=None, type=Path) # If compare_time is True, then give the path to quantized model as well.
+    parser.add_argument('--evaluate', default=False) # If only want to evaluate
+
     return parser
