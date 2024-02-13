@@ -108,13 +108,6 @@ def main(args):
     else:
         print('[load quantized model]')
         quantized_model = load_model(args.quantized, device, half=False, weights='quant')
-    
-    print("$"*50)
-    print(model.state_dict())
-    print("$"*50)
-    print("$"*50)
-    print(quantized_model.state_dict())
-    print("$"*50)
 
     '''
     Evaluation
