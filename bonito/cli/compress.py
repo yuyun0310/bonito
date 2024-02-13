@@ -20,6 +20,7 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from torch.quantization import quantize_dynamic
+import copy
 # from memory_profiler import memory_usage
 
 def main(args):
@@ -98,37 +99,38 @@ def main(args):
     Quantization
     '''
     print("[quantize pre-trained model]")
+    model_copy = copy.deepcopy(model)
 
-    model.to('cpu')  # Move the model to CPU for quantization
+    model_copy.to('cpu')  # Move the model to CPU for quantization
 
     if args.dynamic:
         # Apply dynamic quantization to the LSTM and linear layers
         quantized_model = quantize_dynamic(
-            model,
+            model_copy,
             {torch.nn.LSTM, torch.nn.Linear},  # Specify the types of layers to quantize
             dtype=torch.qint8  # Use 8-bit integer quantization
         )
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_dynamic.tar"))
     elif args.static:
-        model.to('cuda')
+        model_copy.to('cuda')
 
         # Set the model to evaluation mode
-        model.eval()
+        model_copy.eval()
 
         # Specify the layers to be quantized
-        model.qconfig = torch.quantization.get_default_qconfig('fbgemm')
-        torch.quantization.prepare(model, inplace=True)
+        model_copy.qconfig = torch.quantization.get_default_qconfig('fbgemm')
+        torch.quantization.prepare(model_copy, inplace=True)
 
         # Assuming calibration_dataset is a DataLoader object providing input tensors
         with torch.no_grad():
             for data, *_ in train_loader:
                 data = data.to('cuda')
-                model(data)
+                model_copy(data)
 
-        model.to('cpu')
-        quantized_model = torch.quantization.convert(model, inplace=True)
-        quantized_model = static_quantization_wrapper(quantized_model)
+        model_copy.to('cpu')
+        quantized_model = torch.quantization.convert(model_copy, inplace=True)
+        # quantized_model = static_quantization_wrapper(quantized_model)
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_static.tar"))
 
