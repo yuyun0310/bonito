@@ -118,6 +118,8 @@ def main(args):
 
         # Set the model to evaluation mode
         model_copy.eval()
+        print(model_copy)
+        print("#" * 100)
 
         # Specify the layers to be quantized
         model_copy.qconfig = torch.quantization.get_default_qconfig('fbgemm')
@@ -131,6 +133,7 @@ def main(args):
 
         model_copy.to('cpu')
         quantized_model = torch.quantization.convert(model_copy, inplace=True)
+        print(quantized_model)
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_static.tar"))
 
