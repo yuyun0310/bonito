@@ -56,7 +56,7 @@ def main(args):
     print("[loading model]")
     if args.pretrained:
         print("[using pretrained model {}]".format(args.pretrained))
-        model = load_model(args.pretrained, device, half=False)
+        model = load_model(args.pretrained, device, half=False, weights='orig')
     else:
         model = load_symbol(config, 'Model')(config)
 
@@ -87,7 +87,7 @@ def main(args):
         os.makedirs(workdir, exist_ok=True)
         argsdict = dict(training=vars(args))
         toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
-        torch.save(model.state_dict(), os.path.join(workdir, "weights.orig.tar"))
+        torch.save(model.state_dict(), os.path.join(workdir, "weights_orig.tar"))
 
     '''
     Quantization
@@ -104,10 +104,10 @@ def main(args):
             dtype=torch.qint8  # Use 8-bit integer quantization
         )
         
-        torch.save(quantized_model.state_dict(), os.path.join(workdir, "weights.quant.tar"))
+        torch.save(quantized_model.state_dict(), os.path.join(workdir, "weights_quant.tar"))
     else:
         print('[load quantized model]')
-        quantized_model = load_model(args.quantized, device, half=False)
+        quantized_model = load_model(args.quantized, device, half=False, weights='quant')
 
     '''
     Evaluation
@@ -125,7 +125,7 @@ def main(args):
         print("Before:")
 
         print("[compare model size before and after quantization]")
-        evaluate_model_storage_compression_rate("weights.orig.tar", "weights.quant.tar", workdir)
+        evaluate_model_storage_compression_rate("weights_orig.tar", "weights_quant.tar", workdir)
 
         print("[compare model structure before and after quantization]")
         model_structure_comparison(model, quantized_model, workdir)
