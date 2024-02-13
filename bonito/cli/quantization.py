@@ -4,6 +4,24 @@ import time
 import toml
 import numpy as np
 from bonito.util import accuracy, decode_ref, permute, get_parameters_count
+from torch.quantization import QuantStub, DeQuantStub
+
+class QuantizedModelWrapper(torch.nn.Module):
+    def __init__(self, model):
+        super(QuantizedModelWrapper, self).__init__()
+        self.quant = QuantStub()
+        self.model = model
+        self.dequant = DeQuantStub()
+
+    def forward(self, x):
+        x = self.quant(x)
+        x = self.model(x)
+        x = self.dequant(x)
+        return x
+
+def static_quantization_wrapper(model):
+    wrapped_model = QuantizedModelWrapper(model)
+    return wrapped_model
 
 def model_structure_comparison(model1, model2, workdir, report_file='model_comparison_report.txt'):
     '''
