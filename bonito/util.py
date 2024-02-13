@@ -305,6 +305,8 @@ def _load_model(model_file, config, device, half=None, use_koi=False):
         )
 
     state_dict = torch.load(model_file, map_location=device)
+    print(state_dict)
+    print(model)
     state_dict = {k2: state_dict[k1] for k1, k2 in match_names(state_dict, model).items()}
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
