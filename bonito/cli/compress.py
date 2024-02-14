@@ -66,7 +66,8 @@ def main(args):
     else:
         model = load_symbol(config, 'Model')(config)
 
-    print(model.module.state_dict())
+    print(type(model))
+    print(model.encoder)
 
     # load data
     print("[loading data]")
