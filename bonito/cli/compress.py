@@ -21,7 +21,10 @@ import numpy as np
 from torch.utils.data import DataLoader
 from torch.quantization import quantize_dynamic
 import copy
+
+from bonito_compression.bonito import bonito
 # from memory_profiler import memory_usage
+from bonito.nn import layers
 
 def main(args):
     current_backend = torch.backends.quantized.engine
@@ -67,7 +70,8 @@ def main(args):
         model = load_symbol(config, 'Model')(config)
 
     print(type(model))
-    print(model.encoder)
+    print(type(model.encoder), model.encoder)
+    print(layers)
 
     # load data
     print("[loading data]")
