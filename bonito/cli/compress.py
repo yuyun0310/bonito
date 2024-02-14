@@ -22,7 +22,7 @@ from torch.utils.data import DataLoader
 from torch.quantization import quantize_dynamic
 import copy
 
-from bonito_compression.bonito import bonito
+# from bonito_compression.bonito import bonito
 # from memory_profiler import memory_usage
 from bonito.nn import layers
 
