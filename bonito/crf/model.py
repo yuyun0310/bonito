@@ -154,6 +154,7 @@ class ConditionalQuantizationWrapper(Module):
     def forward(self, x):
         if self.apply_quantization:
             x = self.quant(x)
+            print("in")
         x = self.module(x)
         if self.apply_quantization:
             x = self.dequant(x)
