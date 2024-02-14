@@ -68,6 +68,7 @@ def model_structure_comparison(model1, model2, workdir, report_file='model_compa
         write_both(f"Total Parameters in Model 2: {params_model2}")
 
 def evaluate_accuracy(args, model, dataloader, dequant_model=None):
+    print("evaluate ")
     model.eval()
 
     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
@@ -80,6 +81,7 @@ def evaluate_accuracy(args, model, dataloader, dequant_model=None):
 
     with torch.no_grad():
         for data, target, *_ in dataloader:
+            print("in")
             targets.extend(torch.unbind(target, 0))
 
             model = model.to('cpu')
