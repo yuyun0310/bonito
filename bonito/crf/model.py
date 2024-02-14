@@ -188,7 +188,9 @@ def rnn_encoder(n_base, state_len, insize=1, stride=5, winlen=19, activation='sw
         conv(16, features, ks=winlen, stride=stride, bias=True, activation=activation, norm=norm),
         # QuantStub(),
         Permute([2, 0, 1]),
+        DeQuantStub(),
         *(rnn(features, features, reverse=(num_layers - i) % 2) for i in range(num_layers)),
+        QuantStub(),
         LinearCRFEncoder(
             features, n_base, state_len, activation='tanh', scale=scale,
             blank_score=blank_score, expand_blanks=expand_blanks
