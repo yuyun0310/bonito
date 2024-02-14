@@ -90,7 +90,9 @@ class Serial(torch.nn.Sequential):
             return x, fmaps
         for layer in self:
             print(layer)
-        return super().forward(x)
+            x = layer(x)
+        # return super().forward(x)
+        return x
 
     def to_dict(self, include_weights=False):
         return {
