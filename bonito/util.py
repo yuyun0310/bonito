@@ -295,7 +295,7 @@ def add_module_prefix(state_dict):
     for key, value in state_dict.items():
         # Split the key by dots and check if the second part is not 'module'
         parts = key.split(".")
-        if parts[1] != "module":
+        if parts[1] != "module" and parts[2] == 'conv':
             # Insert 'module' after the first part (e.g., 'encoder.0') and before the rest
             new_key = f"{parts[0]}.{parts[1]}.module.{'.'.join(parts[2:])}"
         else:
