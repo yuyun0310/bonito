@@ -155,7 +155,7 @@ class ConditionalQuantizationWrapper(Module):
     def forward(self, x):
         if self.apply_quantization:
             x = self.quant(x)
-            print("in")
+            print("in forward")
         x = self.module(x)
         if self.apply_quantization:
             x = self.dequant(x)
@@ -183,9 +183,9 @@ def rnn_encoder(n_base, state_len, insize=1, stride=5, winlen=19, activation='sw
     rnn = layers[rnn_type]
     print("*************rnn_encoder***********")
     return Serial([
-        ConditionalQuantizationWrapper(conv(insize, 4, ks=5, bias=True, activation=activation, norm=norm), apply_quantization=activation != 'swish'),
-        ConditionalQuantizationWrapper(conv(4, 16, ks=5, bias=True, activation=activation, norm=norm), apply_quantization=activation != 'swish'),
-        ConditionalQuantizationWrapper(conv(16, features, ks=winlen, stride=stride, bias=True, activation=activation, norm=norm), apply_quantization=activation != 'swish'),
+        ConditionalQuantizationWrapper(conv(insize, 4, ks=5, bias=True, activation=activation, norm=norm), apply_quantization=activation == 'swish'),
+        ConditionalQuantizationWrapper(conv(4, 16, ks=5, bias=True, activation=activation, norm=norm), apply_quantization=activation == 'swish'),
+        ConditionalQuantizationWrapper(conv(16, features, ks=winlen, stride=stride, bias=True, activation=activation, norm=norm), apply_quantization=activation == 'swish'),
         Permute([2, 0, 1]),
         *(rnn(features, features, reverse=(num_layers - i) % 2) for i in range(num_layers)),
         LinearCRFEncoder(
