@@ -82,6 +82,7 @@ class Serial(torch.nn.Sequential):
     def forward(self, x, return_features=False):
         print("...........Serial...........")
         if return_features:
+            print("hhhhhhhhhhhhhhh")
             fmaps = []
             for layer in self:
                 x = layer(x)
