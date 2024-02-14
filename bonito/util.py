@@ -287,10 +287,19 @@ def load_model(dirname, device, weights=None, half=None, chunksize=None, batchsi
     config = set_config_defaults(config, chunksize, batchsize, overlap, quantize)
     return _load_model(weights, config, device, half, use_koi)
 
-def adjust_keys_for_loading(state_dict):
+def add_module_prefix(state_dict):
+    """
+    Adjusts the keys by adding 'module.' prefix to match the expected structure.
+    """
     new_state_dict = {}
     for key, value in state_dict.items():
-        new_key = 'module.' + key if not key.startswith('module.') else key
+        # Split the key by dots and check if the second part is not 'module'
+        parts = key.split(".")
+        if parts[1] != "module":
+            # Insert 'module' after the first part (e.g., 'encoder.0') and before the rest
+            new_key = f"{parts[0]}.module.{'.'.join(parts[1:])}"
+        else:
+            new_key = key
         new_state_dict[new_key] = value
     return new_state_dict
 
@@ -317,7 +326,7 @@ def _load_model(model_file, config, device, half=None, use_koi=False):
         name = k.replace('module.', '')
         new_state_dict[name] = v
 
-    new_state_dict = adjust_keys_for_loading(new_state_dict)
+    new_state_dict = add_module_prefix(new_state_dict)
     model.load_state_dict(new_state_dict)
 
     if half is None:
