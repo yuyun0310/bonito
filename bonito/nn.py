@@ -34,6 +34,7 @@ class Linear(Module):
         )
 
     def forward(self, x):
+        print("...........Linear...........")
         return self.linear(x)
 
     def to_dict(self, include_weights=False):
@@ -79,6 +80,7 @@ class Serial(torch.nn.Sequential):
         super().__init__(*sublayers)
 
     def forward(self, x, return_features=False):
+        print("...........Serial...........")
         if return_features:
             fmaps = []
             for layer in self:
@@ -120,6 +122,7 @@ class BatchNorm(Module):
         self.bn = torch.nn.BatchNorm1d(num_features, eps, momentum, affine, track_running_stats)
 
     def forward(self, x):
+        print("...........BatchNorm...........")
         return self.bn(x)
 
     def to_dict(self, include_weights=False):
@@ -214,6 +217,7 @@ class LinearCRFEncoder(Module):
         self.permute = permute
 
     def forward(self, x):
+        print("...........LinearCRFEncoder...........")
         if self.permute is not None:
             x = x.permute(*self.permute)
         scores = self.linear(x)
@@ -268,6 +272,7 @@ class Permute(Module):
         self.dims = dims
 
     def forward(self, x):
+        print("...........Permute...........")
         return x.permute(*self.dims)
 
     def to_dict(self, include_weights=False):
