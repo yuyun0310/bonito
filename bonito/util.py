@@ -287,15 +287,11 @@ def load_model(dirname, device, weights=None, half=None, chunksize=None, batchsi
     config = set_config_defaults(config, chunksize, batchsize, overlap, quantize)
     return _load_model(weights, config, device, half, use_koi)
 
-def update_state_dict_keys(state_dict):
+def remap_state_dict_keys(state_dict):
     new_state_dict = {}
-    for key in state_dict.keys():
-        new_key = key
-        # Modify the key here based on how you wrapped the layers.
-        # For example, if you wrapped layers with a QuantizationWrapper named 'module', you should adjust the key accordingly.
-        if key.startswith("encoder.") and ".module." not in key:
-            parts = key.split(".", 2)  # Split at the first two dots.
-            new_key = f"{parts[0]}.module.{parts[1]}"
+    for key in state_dict:
+        # Replace the prefix to match the new model structure
+        new_key = key.replace('encoder.', 'encoder.module.')
         new_state_dict[new_key] = state_dict[key]
     return new_state_dict
 
@@ -322,7 +318,7 @@ def _load_model(model_file, config, device, half=None, use_koi=False):
         name = k.replace('module.', '')
         new_state_dict[name] = v
 
-    new_state_dict = update_state_dict_keys(new_state_dict)
+    new_state_dict = remap_state_dict_keys(new_state_dict)
     model.load_state_dict(new_state_dict)
 
     if half is None:
