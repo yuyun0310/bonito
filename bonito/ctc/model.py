@@ -9,6 +9,8 @@ from torch.nn.functional import log_softmax, ctc_loss
 from torch.nn import Module, ModuleList, Sequential, Conv1d, BatchNorm1d, Dropout
 
 from fast_ctc_decode import beam_search, viterbi_search
+from torch.quantization import QuantStub, DeQuantStub
+from bonito.nn import Swish
 
 
 class Model(Module):
@@ -121,21 +123,94 @@ class TCSConv1d(Module):
         return x
 
 
+# class Block(Module):
+#     """
+#     TCSConv, Batch Normalisation, Activation, Dropout
+#     """
+#     def __init__(self, in_channels, out_channels, activation, repeat=5, kernel_size=1, stride=1, dilation=1, dropout=0.0, residual=False, separable=False):
+
+#         super(Block, self).__init__()
+
+#         self.use_res = residual
+#         self.conv = ModuleList()
+
+#         _in_channels = in_channels
+#         padding = self.get_padding(kernel_size[0], stride[0], dilation[0])
+
+#         # add the first n - 1 convolutions + activation
+#         for _ in range(repeat - 1):
+#             self.conv.extend(
+#                 self.get_tcs(
+#                     _in_channels, out_channels, kernel_size=kernel_size,
+#                     stride=stride, dilation=dilation,
+#                     padding=padding, separable=separable
+#                 )
+#             )
+
+#             self.conv.extend(self.get_activation(activation, dropout))
+#             _in_channels = out_channels
+
+#         # add the last conv and batch norm
+#         self.conv.extend(
+#             self.get_tcs(
+#                 _in_channels, out_channels,
+#                 kernel_size=kernel_size,
+#                 stride=stride, dilation=dilation,
+#                 padding=padding, separable=separable
+#             )
+#         )
+
+#         # add the residual connection
+#         if self.use_res:
+#             self.residual = Sequential(*self.get_tcs(in_channels, out_channels))
+
+#         # add the activation and dropout
+#         self.activation = Sequential(*self.get_activation(activation, dropout))
+
+#     def get_activation(self, activation, dropout):
+#         return activation, Dropout(p=dropout)
+
+#     def get_padding(self, kernel_size, stride, dilation):
+#         if stride > 1 and dilation > 1:
+#             raise ValueError("Dilation and stride can not both be greater than 1")
+#         return (kernel_size // 2) * dilation
+
+#     def get_tcs(self, in_channels, out_channels, kernel_size=1, stride=1, dilation=1, padding=0, bias=False, separable=False):
+#         return [
+#             TCSConv1d(
+#                 in_channels, out_channels, kernel_size,
+#                 stride=stride, dilation=dilation, padding=padding,
+#                 bias=bias, separable=separable
+#             ),
+#             BatchNorm1d(out_channels, eps=1e-3, momentum=0.1)
+#         ]
+
+#     def forward(self, x):
+#         _x = x
+#         for layer in self.conv:
+#             _x = layer(_x)
+#         if self.use_res:
+#             _x = _x + self.residual(x)
+#         return self.activation(_x)
+
 class Block(Module):
     """
     TCSConv, Batch Normalisation, Activation, Dropout
     """
-    def __init__(self, in_channels, out_channels, activation, repeat=5, kernel_size=1, stride=1, dilation=1, dropout=0.0, residual=False, separable=False):
-
+    def __init__(self, in_channels, out_channels, activation, repeat=5, kernel_size=1, stride=1, dilation=1, dropout=0.0, residual=False, separable=False, use_quant=False):
         super(Block, self).__init__()
 
         self.use_res = residual
         self.conv = ModuleList()
+        self.use_quant = use_quant and isinstance(activation(), Swish)
+
+        if self.use_quant:
+            self.quant = QuantStub()
+            self.dequant = DeQuantStub()
 
         _in_channels = in_channels
         padding = self.get_padding(kernel_size[0], stride[0], dilation[0])
 
-        # add the first n - 1 convolutions + activation
         for _ in range(repeat - 1):
             self.conv.extend(
                 self.get_tcs(
@@ -144,11 +219,9 @@ class Block(Module):
                     padding=padding, separable=separable
                 )
             )
-
             self.conv.extend(self.get_activation(activation, dropout))
             _in_channels = out_channels
 
-        # add the last conv and batch norm
         self.conv.extend(
             self.get_tcs(
                 _in_channels, out_channels,
@@ -158,13 +231,11 @@ class Block(Module):
             )
         )
 
-        # add the residual connection
         if self.use_res:
             self.residual = Sequential(*self.get_tcs(in_channels, out_channels))
 
-        # add the activation and dropout
         self.activation = Sequential(*self.get_activation(activation, dropout))
-
+    
     def get_activation(self, activation, dropout):
         return activation, Dropout(p=dropout)
 
@@ -184,13 +255,22 @@ class Block(Module):
         ]
 
     def forward(self, x):
+        if self.use_quant:
+            x = self.quant(x)
+            
         _x = x
         for layer in self.conv:
             _x = layer(_x)
+            
         if self.use_res:
             _x = _x + self.residual(x)
-        return self.activation(_x)
-
+            
+        _x = self.activation(_x)
+        
+        if self.use_quant:
+            _x = self.dequant(_x)
+            
+        return _x
 
 class Decoder(Module):
     """
