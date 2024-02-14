@@ -191,7 +191,6 @@ class SeqdistModel(Module):
         return cls(**kwargs)
 
     def forward(self, x, *args):
-        print("in&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
         return self.encoder(x)
 
     def decode_batch(self, x):
@@ -234,7 +233,7 @@ class Model(SeqdistModel):
             encoder = from_dict(config['encoder'])
         else: #old-style
             encoder = rnn_encoder(seqdist.n_base, seqdist.state_len, insize=config['input']['features'], **config['encoder'])
-
+        print("encoder type:", type(encoder))
         super().__init__(encoder, seqdist, n_pre_post_context_bases=config['input'].get('n_pre_post_context_bases'))
         self.config = config
         # self.use_quant=use_quant
