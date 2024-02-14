@@ -191,6 +191,7 @@ class SeqdistModel(Module):
         return cls(**kwargs)
 
     def forward(self, x, *args):
+        print("in&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
         return self.encoder(x)
 
     def decode_batch(self, x):
@@ -236,6 +237,7 @@ class Model(SeqdistModel):
 
         super().__init__(encoder, seqdist, n_pre_post_context_bases=config['input'].get('n_pre_post_context_bases'))
         self.config = config
+        # self.use_quant=use_quant
 
     def use_koi(self, **kwargs):
         self.encoder = koi.lstm.update_graph(
