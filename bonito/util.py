@@ -288,9 +288,9 @@ def load_model(dirname, device, weights=None, half=None, chunksize=None, batchsi
     return _load_model(weights, config, device, half, use_koi)
 
 def add_module_prefix(state_dict):
-    print("*" * 120)
-    print("add_module_prefix(state_dict)")
-    print("*" * 120)
+    # print("*" * 120)
+    # print("add_module_prefix(state_dict)")
+    # print("*" * 120)
     """
     Adjusts the keys by adding 'module.' prefix to match the expected structure.
     """
@@ -329,7 +329,7 @@ def _load_model(model_file, config, device, half=None, use_koi=False):
         name = k.replace('module.', '')
         new_state_dict[name] = v
 
-    new_state_dict = add_module_prefix(new_state_dict)
+    # new_state_dict = add_module_prefix(new_state_dict)
     model.load_state_dict(new_state_dict)
 
     if half is None:
