@@ -230,10 +230,12 @@ class Model(SeqdistModel):
             alphabet=config['labels']['labels']
         )
         if 'type' in config['encoder']: #new-style config
+            print("1")
             encoder = from_dict(config['encoder'])
         else: #old-style
+            print("2")
             encoder = rnn_encoder(seqdist.n_base, seqdist.state_len, insize=config['input']['features'], **config['encoder'])
-        print("encoder type:", type(encoder))
+        # print("encoder type:", type(encoder))
         super().__init__(encoder, seqdist, n_pre_post_context_bases=config['input'].get('n_pre_post_context_bases'))
         self.config = config
         # self.use_quant=use_quant
