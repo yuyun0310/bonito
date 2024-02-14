@@ -18,31 +18,6 @@ class QuantizedModelWrapper(torch.nn.Module):
         x = self.model(x)
         x = self.dequant(x)
         return x
-        # try:
-        #     x = self.quant(x)
-        # except NotImplementedError:
-        #     print("&" * 100)
-        #     print("x = self.quant(x)")
-        #     print("&" * 100)
-        #     return None
-            
-        # try:
-        #     y = self.model(x)
-        # except NotImplementedError:
-        #     print("&" * 100)
-        #     print("y = self.model(x)")
-        #     print("&" * 100)
-        #     return None
-        
-        # try:
-        #     y = self.dequant(y)
-        # except NotImplementedError:
-        #     print("&" * 100)
-        #     print("y = self.dequant(y)")
-        #     print("&" * 100)
-        #     return None
-        
-        # return y
         
 def static_quantization_wrapper(model):
     wrapped_model = QuantizedModelWrapper(model)
