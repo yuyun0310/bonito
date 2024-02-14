@@ -6,6 +6,7 @@ import torch
 from torch.nn import Module
 from torch.nn.init import orthogonal_
 from torch.nn.utils.fusion import fuse_conv_bn_eval
+from torch.quantization import QuantStub, DeQuantStub
 
 
 layers = {}
@@ -155,12 +156,21 @@ class Convolution(Module):
         else:
             self.norm = norm
 
+        self.quant = QuantStub()
+        self.dequant = DeQuantStub()
+
     def forward(self, x):
         h = self.conv(x)
         if self.norm is not None:
             h = self.norm(h)
         if self.activation is not None:
-            h = self.activation(h)
+            if isinstance(self.activation, Swish):
+                print("...........in.........")
+                h = self.dequant(h)
+                h = self.activation(h)
+                h = self.quant(h)
+            else:
+                h = self.activation(h)
         return h
 
     def to_dict(self, include_weights=False):
