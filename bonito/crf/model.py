@@ -148,6 +148,7 @@ class ConditionalQuantizationWrapper(Module):
         self.module = module
         self.apply_quantization = apply_quantization
         if self.apply_quantization:
+            print("here")
             self.quant = QuantStub()
             self.dequant = DeQuantStub()
 
@@ -180,6 +181,7 @@ def conv(c_in, c_out, ks, stride=1, bias=False, activation=None, norm=None):
 
 def rnn_encoder(n_base, state_len, insize=1, stride=5, winlen=19, activation='swish', rnn_type='lstm', features=768, scale=5.0, blank_score=None, expand_blanks=True, num_layers=5, norm=None):
     rnn = layers[rnn_type]
+    print("*************rnn_encoder***********")
     return Serial([
         ConditionalQuantizationWrapper(conv(insize, 4, ks=5, bias=True, activation=activation, norm=norm), apply_quantization=activation != 'swish'),
         ConditionalQuantizationWrapper(conv(4, 16, ks=5, bias=True, activation=activation, norm=norm), apply_quantization=activation != 'swish'),
@@ -222,7 +224,6 @@ class SeqdistModel(Module):
         return cls(**kwargs)
 
     def forward(self, x, *args):
-        print("in")
         return self.encoder(x)
 
     def decode_batch(self, x):
