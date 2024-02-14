@@ -19,7 +19,7 @@ import toml
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
-from torch.quantization import quantize_dynamic, QConfig, default_observer, default_weight_observer
+from torch.quantization import quantize_dynamic
 import copy
 # from memory_profiler import memory_usage
 
@@ -65,6 +65,8 @@ def main(args):
         model = load_model(args.pretrained, device, half=False)
     else:
         model = load_symbol(config, 'Model')(config)
+
+    print(model.module.state_dict())
 
     # load data
     print("[loading data]")
@@ -120,15 +122,13 @@ def main(args):
         quantized_model.eval()
         # print(model_copy)
         # print("#" * 100)
-        
-        # Custom QConfig to quantize weights only and not activations
-        weight_only_qconfig = QConfig(
-            activation=torch.quantization.FakeQuantize.with_args(observer=default_observer, quant_min=0, quant_max=255, dtype=torch.quint8),
-            weight=default_weight_observer
-        )
+        # weight_only_qconfig = QConfig(
+        #     activation=torch.quantization.FakeQuantize.with_args(observer=default_observer, quant_min=0, quant_max=255, dtype=torch.quint8),
+        #     weight=default_weight_observer
+        # )
 
         # Specify the layers to be quantized
-        quantized_model.qconfig = weight_only_qconfig
+        quantized_model.qconfig = torch.quantization.get_default_qconfig('fbgemm')
         torch.quantization.prepare(quantized_model, inplace=True)
 
         # Assuming calibration_dataset is a DataLoader object providing input tensors
