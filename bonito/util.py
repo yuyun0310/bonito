@@ -287,12 +287,11 @@ def load_model(dirname, device, weights=None, half=None, chunksize=None, batchsi
     config = set_config_defaults(config, chunksize, batchsize, overlap, quantize)
     return _load_model(weights, config, device, half, use_koi)
 
-def remap_state_dict_keys(state_dict):
+def adjust_keys_for_loading(state_dict):
     new_state_dict = {}
-    for key in state_dict:
-        # Replace the prefix to match the new model structure
-        new_key = key.replace('encoder.', 'encoder.module.')
-        new_state_dict[new_key] = state_dict[key]
+    for key, value in state_dict.items():
+        new_key = 'module.' + key if not key.startswith('module.') else key
+        new_state_dict[new_key] = value
     return new_state_dict
 
 def _load_model(model_file, config, device, half=None, use_koi=False):
@@ -318,7 +317,7 @@ def _load_model(model_file, config, device, half=None, use_koi=False):
         name = k.replace('module.', '')
         new_state_dict[name] = v
 
-    new_state_dict = remap_state_dict_keys(new_state_dict)
+    new_state_dict = adjust_keys_for_loading(new_state_dict)
     model.load_state_dict(new_state_dict)
 
     if half is None:
