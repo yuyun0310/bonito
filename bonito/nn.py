@@ -230,7 +230,14 @@ class LinearCRFEncoder(Module):
         if self.activation is not None:
             scores = self.activation(scores)
         if self.scale is not None:
-            scores = scores * self.scale
+            # scores = scores * self.scale
+            if scores.is_quantized:
+                print("check if scores.is_quantized:")
+                scores_dequant = scores.dequantize()
+                scores_dequant = scores_dequant * self.scale
+                scores = torch.quantize_per_tensor(scores_dequant, dtype=scores.dtype())
+            else:
+                scores = scores * self.scale
         if self.blank_score is not None and self.expand_blanks:
             T, N, C = scores.shape
             scores = torch.nn.functional.pad(
