@@ -235,6 +235,8 @@ class LinearCRFEncoder(Module):
                 print("check if scores.is_quantized:")
                 scores_dequant = scores.dequantize()
                 scores_dequant = scores_dequant * self.scale
+                print(scores_dequant, self.scale)
+                print(scores_dequant)
                 scores = torch.quantize_per_tensor(scores_dequant, scale=scores.q_scale(), zero_point=scores.q_zero_point(), dtype=torch.qint8)
                 # scores = torch.quantize_per_tensor(scores_dequant, dtype=scores.dtype)
             else:
