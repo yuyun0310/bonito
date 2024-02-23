@@ -4,24 +4,7 @@ import time
 import toml
 import numpy as np
 from bonito.util import accuracy, decode_ref, permute, get_parameters_count
-from torch.quantization import QuantStub, DeQuantStub
-
-class QuantizedModelWrapper(torch.nn.Module):
-    def __init__(self, model):
-        super(QuantizedModelWrapper, self).__init__()
-        self.quant = QuantStub()
-        self.model = model
-        self.dequant = DeQuantStub()
-
-    def forward(self, x):
-        x = self.quant(x)
-        x = self.model(x)
-        x = self.dequant(x)
-        return x
-        
-def static_quantization_wrapper(model):
-    wrapped_model = QuantizedModelWrapper(model)
-    return wrapped_model
+from memory_profiler import memory_usage
 
 def model_structure_comparison(model1, model2, workdir, report_file='model_comparison_report.txt'):
     '''
@@ -81,7 +64,6 @@ def evaluate_accuracy(args, model, dataloader, dequant_model=None):
 
     with torch.no_grad():
         for data, target, *_ in dataloader:
-            print("in")
             targets.extend(torch.unbind(target, 0))
 
             model = model.to('cpu')
@@ -125,6 +107,19 @@ def evaluate_time_cpu(args, model, dataloader):
 
     print("* time      %.2f" % duration)
     print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
+
+def runtime_simulator(model, dataloader):
+    model.eval()
+    model = model.to('cpu')
+
+    with torch.no_grad():
+        for data, *_ in dataloader:
+            data = data.to('cpu')
+            model(data)
+
+def evaluate_runtime_memory(model, dataloader):
+    mem_usage = memory_usage((runtime_simulator, (model, dataloader)), interval=0.5)
+    print("Memory usage (in MB):\n", mem_usage)
 
 def evaluate_model_storage_compression_rate(model_path1, model_path2, workdir):
     size_model1 = os.path.getsize(os.path.join(workdir, model_path1))
