@@ -13,7 +13,7 @@ from pathlib import Path
 from bonito.data import load_numpy, load_script
 from bonito.util import __models__, default_config
 from bonito.util import load_model, load_symbol, init
-from bonito.cli.quantization import model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_storage_compression_rate, save_quantized_model, static_quantization_wrapper
+from bonito.cli.quantization import model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_storage_compression_rate, save_quantized_model, evaluate_runtime_memory
 
 import toml
 import torch
@@ -119,18 +119,13 @@ def main(args):
         )
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_dynamic.tar"))
+    
     elif args.static:
         quantized_model = static_quantization_wrapper(model_copy)
         quantized_model.to('cuda')
 
         # Set the model to evaluation mode
         quantized_model.eval()
-        # print(model_copy)
-        # print("#" * 100)
-        # weight_only_qconfig = QConfig(
-        #     activation=torch.quantization.FakeQuantize.with_args(observer=default_observer, quant_min=0, quant_max=255, dtype=torch.quint8),
-        #     weight=default_weight_observer
-        # )
 
         # Specify the layers to be quantized
         quantized_model.qconfig = torch.quantization.get_default_qconfig('fbgemm')
@@ -144,7 +139,7 @@ def main(args):
 
         quantized_model.to('cpu')
         quantized_model = torch.quantization.convert(quantized_model, inplace=True)
-        # print(quantized_model)
+
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_static.tar"))
 
@@ -152,6 +147,8 @@ def main(args):
     Evaluation
     '''
     model.eval()
+
+    # Currently, only dynamic quantized model can be evaluated.
     quantized_model.eval()
 
     if args.device == 'cuda':
@@ -182,6 +179,21 @@ def main(args):
     print()
     print("After:")
     evaluate_time_cpu(args, quantized_model, valid_loader)
+    print()
+
+    '''
+    Evaluate Runtime Memory Usage
+    '''
+    if args.device == 'cpu':
+        print(['evaluate runtime memory usage on CPU'])
+    else:
+        print(['evaluate runtime memory usage on GPU'])
+
+    print("Before:")
+    evaluate_runtime_memory(model, valid_loader)
+    print()
+    print("After:")
+    evaluate_runtime_memory(quantized_model, valid_loader)
     print()
 
 def argparser():
