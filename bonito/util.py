@@ -287,24 +287,6 @@ def load_model(dirname, device, weights=None, half=None, chunksize=None, batchsi
     config = set_config_defaults(config, chunksize, batchsize, overlap, quantize)
     return _load_model(weights, config, device, half, use_koi)
 
-def add_module_prefix(state_dict):
-    # print("*" * 120)
-    # print("add_module_prefix(state_dict)")
-    # print("*" * 120)
-    """
-    Adjusts the keys by adding 'module.' prefix to match the expected structure.
-    """
-    new_state_dict = {}
-    for key, value in state_dict.items():
-        # Split the key by dots and check if the second part is not 'module'
-        parts = key.split(".")
-        if parts[1] != "module" and parts[2] == 'conv':
-            # Insert 'module' after the first part (e.g., 'encoder.0') and before the rest
-            new_key = f"{parts[0]}.{parts[1]}.module.{'.'.join(parts[2:])}"
-        else:
-            new_key = key
-        new_state_dict[new_key] = value
-    return new_state_dict
 
 def _load_model(model_file, config, device, half=None, use_koi=False):
     device = torch.device(device)
@@ -329,7 +311,6 @@ def _load_model(model_file, config, device, half=None, use_koi=False):
         name = k.replace('module.', '')
         new_state_dict[name] = v
 
-    # new_state_dict = add_module_prefix(new_state_dict)
     model.load_state_dict(new_state_dict)
 
     if half is None:
@@ -438,14 +419,3 @@ def poa(groups, max_poa_sequences=100, gpu_mem_per_batch=0.9):
             group_status, seq_status = batch.add_poa_group(group)
 
     return results
-
-def get_parameters_count(model):
-    params_count = 0
-    masks = dict(model.named_buffers())
-    for name, param in model.named_parameters():
-        if name.replace("orig", "mask") in masks:
-            # Use mask to measure # parameters
-            params_count += torch.sum(masks[name.replace("orig", "mask")] != 0).item()
-        elif param is not None:
-            params_count += torch.sum(param != 0).item()
-    return params_count

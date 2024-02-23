@@ -88,8 +88,6 @@ def evaluate_accuracy(args, model, dataloader, dequant_model=None):
             data = data.to('cpu')
 
             log_probs = model(data)
-            device = next(model.parameters()).device
-            print("Device Type:", device.type)
 
             log_probs = log_probs.to('cuda')
             support_model = support_model.to('cuda')
