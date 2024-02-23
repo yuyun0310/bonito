@@ -419,3 +419,14 @@ def poa(groups, max_poa_sequences=100, gpu_mem_per_batch=0.9):
             group_status, seq_status = batch.add_poa_group(group)
 
     return results
+
+def get_parameters_count(model):
+    params_count = 0
+    masks = dict(model.named_buffers())
+    for name, param in model.named_parameters():
+        if name.replace("orig", "mask") in masks:
+            # Use mask to measure # parameters
+            params_count += torch.sum(masks[name.replace("orig", "mask")] != 0).item()
+        elif param is not None:
+            params_count += torch.sum(param != 0).item()
+    return params_count
