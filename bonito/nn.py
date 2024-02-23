@@ -92,6 +92,7 @@ class Serial(torch.nn.Sequential):
             print(layer)
             print("&" * 50)
             x = layer(x)
+            print("pass")
         # return super().forward(x)
         return x
 
