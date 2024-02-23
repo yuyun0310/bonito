@@ -87,6 +87,11 @@ class Serial(torch.nn.Sequential):
                 x = layer(x)
                 fmaps.append(x)
             return x, fmaps
+        
+        print("#"*50)
+        for layer in self:
+            print(layer)
+        print("#"*50)
         for layer in self:
             print("&" * 50)
             print(layer)
