@@ -161,7 +161,7 @@ def main(args):
         print()
         print("After:")
         evaluate_accuracy(args, quantized_model, valid_loader, model)
-        print("Before:")
+        print()
 
         print("[compare model size before and after quantization]")
         evaluate_model_storage_compression_rate("weights_orig.tar", "weights_quant_dynamic.tar", workdir)

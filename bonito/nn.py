@@ -6,7 +6,6 @@ import torch
 from torch.nn import Module
 from torch.nn.init import orthogonal_
 from torch.nn.utils.fusion import fuse_conv_bn_eval
-from torch.quantization import QuantStub, DeQuantStub
 
 
 layers = {}
@@ -34,7 +33,6 @@ class Linear(Module):
         )
 
     def forward(self, x):
-        print("...........Linear...........")
         return self.linear(x)
 
     def to_dict(self, include_weights=False):
@@ -80,26 +78,13 @@ class Serial(torch.nn.Sequential):
         super().__init__(*sublayers)
 
     def forward(self, x, return_features=False):
-        print("...........Serial...........")
         if return_features:
             fmaps = []
             for layer in self:
                 x = layer(x)
                 fmaps.append(x)
             return x, fmaps
-        
-        print("#"*50)
-        for layer in self:
-            print(layer)
-        print("#"*50)
-        for layer in self:
-            print("&" * 50)
-            print(layer)
-            print("&" * 50)
-            x = layer(x)
-            print("pass")
-        # return super().forward(x)
-        return x
+        return super().forward(x)
 
     def to_dict(self, include_weights=False):
         return {
@@ -134,7 +119,6 @@ class BatchNorm(Module):
         self.bn = torch.nn.BatchNorm1d(num_features, eps, momentum, affine, track_running_stats)
 
     def forward(self, x):
-        print("...........BatchNorm...........")
         return self.bn(x)
 
     def to_dict(self, include_weights=False):
@@ -171,21 +155,12 @@ class Convolution(Module):
         else:
             self.norm = norm
 
-        self.quant = QuantStub()
-        self.dequant = DeQuantStub()
-
     def forward(self, x):
         h = self.conv(x)
         if self.norm is not None:
             h = self.norm(h)
         if self.activation is not None:
-            if isinstance(self.activation, Swish):
-                print("...........in.........")
-                h = self.dequant(h)
-                h = self.activation(h)
-                h = self.quant(h)
-            else:
-                h = self.activation(h)
+            h = self.activation(h)
         return h
 
     def to_dict(self, include_weights=False):
@@ -229,24 +204,13 @@ class LinearCRFEncoder(Module):
         self.permute = permute
 
     def forward(self, x):
-        print("...........LinearCRFEncoder...........")
         if self.permute is not None:
             x = x.permute(*self.permute)
         scores = self.linear(x)
         if self.activation is not None:
             scores = self.activation(scores)
         if self.scale is not None:
-            # scores = scores * self.scale
-            if scores.is_quantized:
-                print("check if scores.is_quantized:")
-                scores_dequant = scores.dequantize()
-                scores_dequant = scores_dequant * self.scale
-                print(scores_dequant, self.scale)
-                print(scores_dequant)
-                scores = torch.quantize_per_tensor(scores_dequant, scale=scores.q_scale(), zero_point=scores.q_zero_point(), dtype=torch.qint8)
-                # scores = torch.quantize_per_tensor(scores_dequant, dtype=scores.dtype)
-            else:
-                scores = scores * self.scale
+            scores = scores * self.scale
         if self.blank_score is not None and self.expand_blanks:
             T, N, C = scores.shape
             scores = torch.nn.functional.pad(
@@ -294,7 +258,6 @@ class Permute(Module):
         self.dims = dims
 
     def forward(self, x):
-        print("...........Permute...........")
         return x.permute(*self.dims)
 
     def to_dict(self, include_weights=False):

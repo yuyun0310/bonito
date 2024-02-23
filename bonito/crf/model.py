@@ -10,7 +10,7 @@ from koi.ctc import SequenceDist, Max, Log, semiring
 from koi.ctc import logZ_cu, viterbi_alignments, logZ_cu_sparse, bwd_scores_cu_sparse, fwd_scores_cu_sparse
 
 from bonito.nn import Module, Convolution, LinearCRFEncoder, Serial, Permute, layers, to_dict, from_dict, register
-from torch.quantization import QuantStub, DeQuantStub
+
 
 def get_stride(m, stride=1):
     if hasattr(m, "output_stride"):
@@ -142,66 +142,14 @@ class CTC_CRF(SequenceDist):
         stay_scores, move_scores = self.prepare_ctc_scores(scores, targets)
         return viterbi_alignments(stay_scores, move_scores, target_lengths + 1 - self.state_len)
 
-class ConditionalQuantizationWrapper(Module):
-    def __init__(self, module, apply_quantization=True):
-        super().__init__()
-        self.module = module
-        self.apply_quantization = apply_quantization
-        if self.apply_quantization:
-            # print("here")
-            self.quant = QuantStub()
-            self.dequant = DeQuantStub()
-
-    def forward(self, x):
-        if self.apply_quantization:
-            x = self.quant(x)
-            # print("in forward")
-        x = self.module(x)
-        if self.apply_quantization:
-            x = self.dequant(x)
-        return x
 
 def conv(c_in, c_out, ks, stride=1, bias=False, activation=None, norm=None):
     return Convolution(c_in, c_out, ks, stride=stride, padding=ks//2, bias=bias, activation=activation, norm=norm)
 
 
-# def rnn_encoder(n_base, state_len, insize=1, stride=5, winlen=19, activation='swish', rnn_type='lstm', features=768, scale=5.0, blank_score=None, expand_blanks=True, num_layers=5, norm=None):
-#     rnn = layers[rnn_type]
-#     return Serial([
-#         conv(insize, 4, ks=5, bias=True, activation=activation, norm=norm),
-#         conv(4, 16, ks=5, bias=True, activation=activation, norm=norm),
-#         conv(16, features, ks=winlen, stride=stride, bias=True, activation=activation, norm=norm),
-#         Permute([2, 0, 1]),
-#         *(rnn(features, features, reverse=(num_layers - i) % 2) for i in range(num_layers)),
-#         LinearCRFEncoder(
-#             features, n_base, state_len, activation='tanh', scale=scale,
-#             blank_score=blank_score, expand_blanks=expand_blanks
-#         )
-#     ])
-
-# def rnn_encoder(n_base, state_len, insize=1, stride=5, winlen=19, activation='swish', rnn_type='lstm', features=768, scale=5.0, blank_score=None, expand_blanks=True, num_layers=5, norm=None):
-#     rnn = layers[rnn_type]
-#     return Serial([
-#         QuantStub(),
-#         conv(insize, 4, ks=5, bias=True, activation=activation, norm=norm),
-#         conv(4, 16, ks=5, bias=True, activation=activation, norm=norm),
-#         conv(16, features, ks=winlen, stride=stride, bias=True, activation=activation, norm=norm),
-#         # QuantStub(),
-#         Permute([2, 0, 1]),
-#         DeQuantStub(),
-#         *(rnn(features, features, reverse=(num_layers - i) % 2) for i in range(num_layers)),
-#         QuantStub(),
-#         LinearCRFEncoder(
-#             features, n_base, state_len, activation='tanh', scale=scale,
-#             blank_score=blank_score, expand_blanks=expand_blanks
-#         ),
-#         DeQuantStub()
-#     ])
-
 def rnn_encoder(n_base, state_len, insize=1, stride=5, winlen=19, activation='swish', rnn_type='lstm', features=768, scale=5.0, blank_score=None, expand_blanks=True, num_layers=5, norm=None):
     rnn = layers[rnn_type]
     return Serial([
-        QuantStub(),
         conv(insize, 4, ks=5, bias=True, activation=activation, norm=norm),
         conv(4, 16, ks=5, bias=True, activation=activation, norm=norm),
         conv(16, features, ks=winlen, stride=stride, bias=True, activation=activation, norm=norm),
@@ -210,24 +158,8 @@ def rnn_encoder(n_base, state_len, insize=1, stride=5, winlen=19, activation='sw
         LinearCRFEncoder(
             features, n_base, state_len, activation='tanh', scale=scale,
             blank_score=blank_score, expand_blanks=expand_blanks
-        ),
-        DeQuantStub()
+        )
     ])
-
-# def rnn_encoder(n_base, state_len, insize=1, stride=5, winlen=19, activation='swish', rnn_type='lstm', features=768, scale=5.0, blank_score=None, expand_blanks=True, num_layers=5, norm=None):
-#     rnn = layers[rnn_type]
-#     # print("*************rnn_encoder***********")
-#     return Serial([
-#         ConditionalQuantizationWrapper(conv(insize, 4, ks=5, bias=True, activation=activation, norm=norm), apply_quantization=activation == 'swish'),
-#         ConditionalQuantizationWrapper(conv(4, 16, ks=5, bias=True, activation=activation, norm=norm), apply_quantization=activation == 'swish'),
-#         ConditionalQuantizationWrapper(conv(16, features, ks=winlen, stride=stride, bias=True, activation=activation, norm=norm), apply_quantization=activation == 'swish'),
-#         Permute([2, 0, 1]),
-#         *(rnn(features, features, reverse=(num_layers - i) % 2) for i in range(num_layers)),
-#         LinearCRFEncoder(
-#             features, n_base, state_len, activation='tanh', scale=scale,
-#             blank_score=blank_score, expand_blanks=expand_blanks
-#         )
-#     ])
 
 @register
 class SeqdistModel(Module):
@@ -301,10 +233,9 @@ class Model(SeqdistModel):
             encoder = from_dict(config['encoder'])
         else: #old-style
             encoder = rnn_encoder(seqdist.n_base, seqdist.state_len, insize=config['input']['features'], **config['encoder'])
-        print("encoder type:", type(encoder))
+
         super().__init__(encoder, seqdist, n_pre_post_context_bases=config['input'].get('n_pre_post_context_bases'))
         self.config = config
-        # self.use_quant=use_quant
 
     def use_koi(self, **kwargs):
         self.encoder = koi.lstm.update_graph(
