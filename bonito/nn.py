@@ -258,7 +258,7 @@ class Permute(Module):
         self.dims = dims
 
     def forward(self, x):
-        return x.permute(*self.dims)
+        return x.permute(self.dims)
 
     def to_dict(self, include_weights=False):
         return {'dims': self.dims}
