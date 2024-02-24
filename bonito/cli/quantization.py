@@ -77,6 +77,24 @@ def model_structure_comparison(model1, model2, workdir, report_file='model_compa
         params_model2 = get_parameters_count(model2)
         write_both(f"\nTotal Parameters in Model 1: {params_model1}")
         write_both(f"Total Parameters in Model 2: {params_model2}")
+
+def print_model_info(model):
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        # Not counting parameters that are not trainable.
+        if not parameter.requires_grad:
+            continue
+        
+        param_size = parameter.numel()  # Number of elements in the tensor
+        total_params += param_size
+        print(f"{name}: {param_size}")
+    
+    # Assuming all parameters are float32
+    total_size_bytes = total_params * 4  # 4 bytes for float32
+    total_size_mb = total_size_bytes / (1024 ** 2)  # Convert bytes to megabytes
+    
+    print(f"Total Trainable Parameters: {total_params}")
+    print(f"Estimated Total Model Size (MB): {total_size_mb:.2f}")
         
 def evaluate_accuracy(args, model, dataloader):
     print("evaluate ")
