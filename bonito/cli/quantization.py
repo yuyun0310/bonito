@@ -211,6 +211,8 @@ class QuantizedFineTuner:
                 if not isinstance(losses_, dict): losses_ = {'loss': losses_}
 
                 total_loss = losses_.get('total_loss', losses_['loss']) / self.grad_accum_split
+                print(total_loss)
+                total_loss.requires_grad_()
                 self.scaler.scale(total_loss).backward()
 
                 losses = {
