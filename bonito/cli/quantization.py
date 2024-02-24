@@ -275,11 +275,15 @@ class QuantizedFineTuner:
             losses = self.criterion(scores, targets.to(self.device), lengths.to(self.device))
         losses = {k: v.item() for k, v in losses.items()} if isinstance(losses, dict) else losses.item()
 
-        if hasattr(self.support_model, 'decode_batch'):
+        if hasattr(self.model, 'decode_batch'):
+            print("*"*50)
             seqs = self.support_model.decode_batch(scores)
+            print("-"*50)
+            seqs = self.model.decode_batch(scores)
+            print("*"*50)
         else:
             seqs = [self.support_model.decode(x) for x in permute(scores, 'TNC', 'NTC')]
-        refs = [decode_ref(target, self.support_model.alphabet) for target in targets]
+        refs = [decode_ref(target, self.model.alphabet) for target in targets]
 
         n_pre = getattr(self.model, "n_pre_context_bases", 0)
         n_post = getattr(self.model, "n_post_context_bases", 0)
