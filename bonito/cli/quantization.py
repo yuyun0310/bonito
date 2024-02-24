@@ -78,6 +78,46 @@ def model_structure_comparison(model1, model2, workdir, report_file='model_compa
         write_both(f"\nTotal Parameters in Model 1: {params_model1}")
         write_both(f"Total Parameters in Model 2: {params_model2}")
 
+# def evaluate_accuracy(args, model, dataloader, dequant_model=None):
+#     print("evaluate ")
+#     model.eval()
+
+#     accuracy_with_cov = lambda ref, seq: accuracy(ref, seq)
+
+#     seqs = []
+#     t0 = time.perf_counter()
+#     targets = []
+
+#     support_model = dequant_model if dequant_model is not None else model
+
+#     with torch.no_grad():
+#         for data, target, *_ in dataloader:
+#             targets.extend(torch.unbind(target, 0))
+
+#             model = model.to('cpu')
+#             data = data.to('cpu')
+
+#             log_probs = model(data)
+
+#             log_probs = log_probs.to('cuda')
+#             support_model = support_model.to('cuda')
+
+#             if hasattr(support_model, 'decode_batch'):
+#                 print(model.decode_batch(log_probs))
+#                 seqs.extend(support_model.decode_batch(log_probs))
+#             else:
+#                 seqs.extend([support_model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
+
+#     duration = time.perf_counter() - t0
+
+#     refs = [decode_ref(target, support_model.alphabet) for target in targets]
+#     accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
+
+#     print("* mean      %.2f%%" % np.mean(accuracies))
+#     print("* median    %.2f%%" % np.median(accuracies))
+#     print("* time      %.2f" % duration)
+#     print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
+        
 def evaluate_accuracy(args, model, dataloader, dequant_model=None):
     print("evaluate ")
     model.eval()
@@ -88,7 +128,7 @@ def evaluate_accuracy(args, model, dataloader, dequant_model=None):
     t0 = time.perf_counter()
     targets = []
 
-    support_model = dequant_model if dequant_model is not None else model
+    # support_model = dequant_model if dequant_model is not None else model
 
     with torch.no_grad():
         for data, target, *_ in dataloader:
@@ -100,17 +140,17 @@ def evaluate_accuracy(args, model, dataloader, dequant_model=None):
             log_probs = model(data)
 
             log_probs = log_probs.to('cuda')
-            support_model = support_model.to('cuda')
+            # support_model = support_model.to('cuda')
 
-            if hasattr(support_model, 'decode_batch'):
-                print(model.decode_batch(log_probs))
-                seqs.extend(support_model.decode_batch(log_probs))
+            if hasattr(model, 'decode_batch'):
+                # print(model.decode_batch(log_probs))
+                seqs.extend(model.decode_batch(log_probs))
             else:
-                seqs.extend([support_model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
+                seqs.extend([model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
 
     duration = time.perf_counter() - t0
 
-    refs = [decode_ref(target, support_model.alphabet) for target in targets]
+    refs = [decode_ref(target, model.alphabet) for target in targets]
     accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
 
     print("* mean      %.2f%%" % np.mean(accuracies))
