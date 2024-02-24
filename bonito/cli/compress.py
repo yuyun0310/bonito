@@ -13,7 +13,7 @@ from pathlib import Path
 from bonito.data import load_numpy, load_script
 from bonito.util import __models__, default_config
 from bonito.util import load_model, load_symbol, init
-from bonito.cli.quantization import model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_storage_compression_rate, save_quantized_model, static_quantization_wrapper, evaluate_runtime_memory
+from bonito.cli.quantization import model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_storage_compression_rate, print_model_info, save_quantized_model, static_quantization_wrapper, evaluate_runtime_memory
 from bonito.cli.quantization import QuantizedFineTuner
 
 import toml
@@ -220,6 +220,9 @@ def main(args):
 
         print("[compare model structure before and after quantization]")
         model_structure_comparison(model, quantized_model, workdir)
+
+        print_model_info(model)
+        print_model_info(quantized_model)
 
     '''
     Evaluate time
