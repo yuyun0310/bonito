@@ -203,8 +203,9 @@ class QuantizedFineTuner:
                 data_ = data_.to(self.device)
                 targets_ = targets_.to(self.device)
                 lengths_ = lengths_.to(self.device)
+                scores_ = scores_.to(self.device)
 
-                print("Calculate loss in train one step")
+                # print("Calculate loss in train one step")
                 losses_ = self.criterion(scores_, targets_, lengths_)
 
                 if not isinstance(losses_, dict): losses_ = {'loss': losses_}
