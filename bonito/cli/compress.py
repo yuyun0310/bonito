@@ -126,26 +126,6 @@ def main(args):
         # calib = ['no_calib', 'fine_tune', 'kl_distil']
 
         if args.calib == 'fine_tune':
-            # quantized_model = fine_tune()
-            # optimizer = AdamW(model.parameters(), amsgrad=False, lr=args.lr)
-            # lr_scheduler = func_scheduler(
-            #     optimizer, linear_warmup_cosine_decay(1.0, 0.1), args.epochs * len(train_loader),
-            #     warmup_steps=500, start_step=last_epoch*len(train_loader)
-            # )
-            # # Training loop
-            # num_epochs = 5
-            # for epoch in range(num_epochs):
-            #     model.train()
-            #     running_loss = 0.0
-            #     for inputs, labels in train_loader:
-            #         optimizer.zero_grad()
-            #         outputs = model(inputs)
-            #         loss = criterion(outputs, labels)
-            #         loss.backward()
-            #         optimizer.step()
-            #         running_loss += loss.item() * inputs.size(0)
-            #     epoch_loss = running_loss / len(train_dataset)
-            #     print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
             if config.get("lr_scheduler"):
                 sched_config = config["lr_scheduler"]
                 lr_scheduler_fn = getattr(
@@ -154,7 +134,7 @@ def main(args):
             else:
                 lr_scheduler_fn = None
             trainer = QuantizedFineTuner(
-                quantized_model, model, train_loader, valid_loader,
+                quantized_model, train_loader, valid_loader,
                 device=device,
                 criterion=None,
                 use_amp=False,
@@ -210,7 +190,7 @@ def main(args):
         evaluate_accuracy(args, model, valid_loader)
         print()
         print("After:")
-        evaluate_accuracy(args, quantized_model, valid_loader, model)
+        evaluate_accuracy(args, quantized_model, valid_loader)
         print()
 
         print("[compare model size before and after quantization]")
