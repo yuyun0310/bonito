@@ -281,8 +281,8 @@ class QuantizedFineTuner:
             seqs = [self.support_model.decode(x) for x in permute(scores, 'TNC', 'NTC')]
         refs = [decode_ref(target, self.support_model.alphabet) for target in targets]
 
-        n_pre = getattr(self.model, "n_pre_context_bases", 0).to('cuda')
-        n_post = getattr(self.model, "n_post_context_bases", 0).to('cuda')
+        n_pre = getattr(self.model, "n_pre_context_bases", 0)
+        n_post = getattr(self.model, "n_post_context_bases", 0)
         if n_pre > 0 or n_post > 0:
             refs = [ref[n_pre:len(ref)-n_post] for ref in refs]
 
