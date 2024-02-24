@@ -165,7 +165,7 @@ def main(args):
                 lr = [float(x) for x in args.lr.split(',')]
             else:
                 lr = float(args.lr)
-            trainer.fit(workdir, args.epochs, lr)
+            quantized_model = trainer.fit(workdir, args.epochs, lr)
 
         elif args.calib == 'kl_distil':
             # quantized_model = knowledge_distillation()
