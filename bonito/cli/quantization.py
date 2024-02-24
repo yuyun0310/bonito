@@ -167,7 +167,7 @@ class QuantizedFineTuner:
         save_optim_every=10, grad_accum_split=1, quantile_grad_clip=False
     ):
         self.model = model.to('cpu')
-        self.support_model = support_model.to(device)
+        # self.support_model = support_model.to(device)
         self.device = device
         self.train_loader = train_loader
         self.valid_loader = valid_loader
@@ -276,13 +276,13 @@ class QuantizedFineTuner:
         losses = {k: v.item() for k, v in losses.items()} if isinstance(losses, dict) else losses.item()
 
         if hasattr(self.model, 'decode_batch'):
-            print("*"*50)
-            seqs = self.support_model.decode_batch(scores)
-            print("-"*50)
+            # print("*"*50)
+            # seqs = self.support_model.decode_batch(scores)
+            # print("-"*50)
             seqs = self.model.decode_batch(scores)
-            print("*"*50)
+            # print("*"*50)
         else:
-            seqs = [self.support_model.decode(x) for x in permute(scores, 'TNC', 'NTC')]
+            seqs = [self.model.decode(x) for x in permute(scores, 'TNC', 'NTC')]
         refs = [decode_ref(target, self.model.alphabet) for target in targets]
 
         n_pre = getattr(self.model, "n_pre_context_bases", 0)
