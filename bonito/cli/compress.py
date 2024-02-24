@@ -13,7 +13,8 @@ from pathlib import Path
 from bonito.data import load_numpy, load_script
 from bonito.util import __models__, default_config
 from bonito.util import load_model, load_symbol, init
-from bonito.cli.quantization import model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_storage_compression_rate, save_quantized_model, evaluate_runtime_memory
+from bonito.cli.quantization import model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_storage_compression_rate, save_quantized_model, static_quantization_wrapper, evaluate_runtime_memory
+from bonito.cli.quantization import QuantizedFineTuner
 
 import toml
 import torch
@@ -21,6 +22,8 @@ import numpy as np
 from torch.utils.data import DataLoader
 from torch.quantization import quantize_dynamic
 import copy
+from torch.optim import AdamW
+from importlib import import_module
 
 # from bonito_compression.bonito import bonito
 # from memory_profiler import memory_usage
@@ -119,6 +122,56 @@ def main(args):
         )
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_dynamic.tar"))
+
+        # calib = ['no_calib', 'fine_tune', 'kl_distil']
+
+        if args.calib == 'fine_tune':
+            # quantized_model = fine_tune()
+            # optimizer = AdamW(model.parameters(), amsgrad=False, lr=args.lr)
+            # lr_scheduler = func_scheduler(
+            #     optimizer, linear_warmup_cosine_decay(1.0, 0.1), args.epochs * len(train_loader),
+            #     warmup_steps=500, start_step=last_epoch*len(train_loader)
+            # )
+            # # Training loop
+            # num_epochs = 5
+            # for epoch in range(num_epochs):
+            #     model.train()
+            #     running_loss = 0.0
+            #     for inputs, labels in train_loader:
+            #         optimizer.zero_grad()
+            #         outputs = model(inputs)
+            #         loss = criterion(outputs, labels)
+            #         loss.backward()
+            #         optimizer.step()
+            #         running_loss += loss.item() * inputs.size(0)
+            #     epoch_loss = running_loss / len(train_dataset)
+            #     print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
+            if config.get("lr_scheduler"):
+                sched_config = config["lr_scheduler"]
+                lr_scheduler_fn = getattr(
+                    import_module(sched_config["package"]), sched_config["symbol"]
+                )(**sched_config)
+            else:
+                lr_scheduler_fn = None
+            trainer = QuantizedFineTuner(
+                quantized_model, model, train_loader, valid_loader,
+                device=device,
+                criterion=None,
+                use_amp=False,
+                lr_scheduler_fn=lr_scheduler_fn
+            )
+
+            if (',' in args.lr):
+                lr = [float(x) for x in args.lr.split(',')]
+            else:
+                lr = float(args.lr)
+            trainer.fit(workdir, args.epochs, lr)
+
+        elif args.calib == 'kl_distil':
+            # quantized_model = knowledge_distillation()
+            pass
+        else:
+            pass
     
     elif args.static:
         quantized_model = static_quantization_wrapper(model_copy)
@@ -226,5 +279,6 @@ def argparser():
     group_method = parser.add_mutually_exclusive_group()
     group_method.add_argument("--dynamic", action="store_true", default=False)
     group_method.add_argument("--static", action="store_true", default=False)
+    parser.add_argument("--calib", default='no_calib', type=str)
 
     return parser
