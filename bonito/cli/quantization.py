@@ -4,7 +4,7 @@ import time
 import toml
 import numpy as np
 from bonito.util import accuracy, decode_ref, permute, get_parameters_count
-from bonito.bonito.training import ClipGrad, load_state
+from bonito.training import ClipGrad, load_state
 from bonito.io import CSVLogger
 from memory_profiler import memory_usage
 from torch.quantization import QuantStub, DeQuantStub
