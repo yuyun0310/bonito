@@ -13,7 +13,7 @@ from pathlib import Path
 from bonito.data import load_numpy, load_script
 from bonito.util import __models__, default_config
 from bonito.util import load_model, load_symbol, init
-from bonito.cli.quantization import evaluate_model_size, model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_storage_compression_rate, print_model_info, save_quantized_model, static_quantization_wrapper, evaluate_runtime_memory
+from bonito.cli.quantization import evaluate_model_size, measure_dynamic_memory_usage, model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_static_memory, print_model_info, save_quantized_model, static_quantization_wrapper, evaluate_runtime_memory
 from bonito.cli.quantization import QuantizedFineTuner
 
 import toml
@@ -216,7 +216,7 @@ def main(args):
         print()
 
         print("[compare model size before and after quantization]")
-        evaluate_model_storage_compression_rate("weights_orig.tar", "weights_quant_dynamic.tar", workdir)
+        evaluate_model_static_memory("weights_orig.tar", "weights_quant_dynamic.tar", workdir)
 
         print("[compare model structure before and after quantization]")
         model_structure_comparison(model, quantized_model, workdir)
@@ -224,7 +224,15 @@ def main(args):
         print_model_info(model)
         print_model_info(quantized_model)
 
-        evaluate_model_size(model, quantized_model, workdir)
+        # evaluate_model_size(model, quantized_model, workdir)
+        print("#"*50)
+        print("#"*50)
+        print("measure_dynamic_memory_usage")
+        measure_dynamic_memory_usage(model, valid_loader)
+        print("_"*50)
+        measure_dynamic_memory_usage(quantized_model, valid_loader)
+        print("#"*50)
+        print("#"*50)
 
     '''
     Evaluate time

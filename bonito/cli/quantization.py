@@ -15,6 +15,7 @@ from bonito.util import accuracy, decode_ref, permute
 from time import perf_counter
 import torch.cuda.amp as amp
 from tqdm import tqdm
+import tracemalloc
 
 class QuantizedModelWrapper(torch.nn.Module):
     def __init__(self, model):
@@ -165,7 +166,7 @@ def evaluate_runtime_memory(model, dataloader):
     print("Memory usage (in MB/0.5 sec):", mem_usage)
     print("Average memory usage (in MB/0.5 sec):", sum(mem_usage)/len(mem_usage))
 
-def evaluate_model_storage_compression_rate(model_path1, model_path2, workdir):
+def evaluate_model_static_memory(model_path1, model_path2, workdir):
     size_model1 = os.path.getsize(os.path.join(workdir, model_path1))
     size_model2 = os.path.getsize(os.path.join(workdir, model_path2))
     print("Size of Model 1:", size_model1, "bytes")
@@ -393,3 +394,22 @@ class QuantizedFineTuner:
                 'validation_median': val_median
             })
         return self.model
+
+def measure_dynamic_memory_usage(model, data_loader):
+    tracemalloc.start()
+    
+    with torch.no_grad():
+        for inputs, _ in data_loader:
+            snapshot_before = tracemalloc.take_snapshot()
+            model(inputs)
+            snapshot_after = tracemalloc.take_snapshot()
+
+            current, peak = tracemalloc.get_traced_memory()
+            print(f"Current memory usage is {current / 10**6}MB; Peak was {peak / 10**6}MB")
+            
+            # Comparing memory snapshot before and after inference to see the difference
+            stats = snapshot_after.compare_to(snapshot_before, 'lineno')
+            for stat in stats[:10]:  # Print top 10 differences
+                print(stat)
+    
+    tracemalloc.stop()
