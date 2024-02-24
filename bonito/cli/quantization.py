@@ -103,6 +103,7 @@ def evaluate_accuracy(args, model, dataloader, dequant_model=None):
             support_model = support_model.to('cuda')
 
             if hasattr(support_model, 'decode_batch'):
+                print(model.decode_batch(log_probs))
                 seqs.extend(support_model.decode_batch(log_probs))
             else:
                 seqs.extend([support_model.decode(p) for p in permute(log_probs, 'TNC', 'NTC')])
