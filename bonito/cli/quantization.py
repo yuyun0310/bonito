@@ -97,7 +97,7 @@ def evaluate_accuracy(args, model, dataloader):
 
             log_probs = model(data)
 
-            # log_probs = log_probs.to('cuda')
+            log_probs = log_probs.to('cuda')
 
             if hasattr(model, 'decode_batch'):
                 seqs.extend(model.decode_batch(log_probs))
