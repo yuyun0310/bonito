@@ -97,6 +97,24 @@ def main(args):
     }
     train_loader = DataLoader(**loader_kwargs, **train_loader_kwargs)
     valid_loader = DataLoader(**loader_kwargs, **valid_loader_kwargs)
+    print("^"* 50)
+    total_samples = 0
+    total_batches = 0
+    for batch in train_loader:
+        # Update sample count and batch count
+        total_samples += batch[0].size(0)  # Assuming each batch contains input samples in the first dimension
+        total_batches += 1
+    print("train_loader size:", total_samples)
+    
+
+    total_samples = 0
+    total_batches = 0
+    for batch in valid_loader:
+        # Update sample count and batch count
+        total_samples += batch[0].size(0)  # Assuming each batch contains input samples in the first dimension
+        total_batches += 1
+    print("val_loader size:", total_samples)
+    print("^"* 50)
 
     # save config file and original pretrained model if not just evaluate
     if not args.evaluate:
