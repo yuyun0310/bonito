@@ -399,7 +399,7 @@ def measure_dynamic_memory_usage(model, data_loader):
     tracemalloc.start()
     
     with torch.no_grad():
-        for inputs, _ in data_loader:
+        for inputs, *_ in data_loader:
             snapshot_before = tracemalloc.take_snapshot()
             model(inputs)
             snapshot_after = tracemalloc.take_snapshot()
