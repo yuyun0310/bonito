@@ -203,6 +203,9 @@ def main(args):
     # Currently, only dynamic quantized model can be evaluated.
     quantized_model.eval()
 
+    print(model)
+    print(quantized_model)
+
     if args.device == 'cuda':
         print("[compare model accuracy before and after quantization]")
         print("Before:")
