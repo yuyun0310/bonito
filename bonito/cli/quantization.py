@@ -171,6 +171,21 @@ def evaluate_model_storage_compression_rate(model_path1, model_path2, workdir):
     print("Size of Model 1:", size_model1, "bytes")
     print("Size of Model 2:", size_model2, "bytes")
 
+def evaluate_model_size(model, quantized_model, workdir):
+    # Convert both models to TorchScript
+    scripted_original_model = torch.jit.script(model)
+    scripted_quantized_model = torch.jit.script(quantized_model)
+
+    # Save both models
+    torch.jit.save(scripted_original_model, os.path.join(workdir, 'original_model_torchscript.pt'))
+    torch.jit.save(scripted_quantized_model,  os.path.join(workdir, 'quantized_model_torchscript.pt'))
+
+    # Compare file sizes
+    original_size = os.path.getsize('original_model_torchscript.pt')
+    quantized_size = os.path.getsize('quantized_model_torchscript.pt')
+    print(f"Original Model Size: {original_size / (1024 * 1024):.2f} MB")
+    print(f"Quantized Model Size: {quantized_size / (1024 * 1024):.2f} MB")
+
 def save_quantized_model(model, config, argsdict, workdir, file_path):
     toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
     torch.save(model.state_dict(), os.path.join(workdir, file_path))
