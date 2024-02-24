@@ -190,7 +190,7 @@ class SeqdistModel(Module):
         )
         return cls(**kwargs)
 
-    def forward(self, x, *args):
+    def forward(self, x):
         return self.encoder(x)
 
     def decode_batch(self, x):
