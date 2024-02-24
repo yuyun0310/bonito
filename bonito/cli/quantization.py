@@ -313,7 +313,7 @@ class QuantizedFineTuner:
         if self.optimizer is None:
             self.init_optimizer(lr, **optim_kwargs)
 
-        last_epoch = load_state(workdir, self.device, self.model, self.optimizer if self.restore_optim else None)
+        last_epoch = 0
 
         if self.restore_optim:
         # override learning rate to new value
