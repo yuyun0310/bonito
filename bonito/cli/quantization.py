@@ -363,3 +363,4 @@ class QuantizedFineTuner:
                 'validation_mean': val_mean,
                 'validation_median': val_median
             })
+        return self.model
