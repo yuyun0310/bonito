@@ -109,10 +109,10 @@ def evaluate_accuracy(args, model, dataloader):
     refs = [decode_ref(target, model.alphabet) for target in targets]
     accuracies = [accuracy_with_cov(ref, seq) if len(seq) else 0. for ref, seq in zip(refs, seqs)]
 
-    print("* mean      %.2f%%" % np.mean(accuracies))
-    print("* median    %.2f%%" % np.median(accuracies))
-    print("* time      %.2f" % duration)
-    print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
+    print("* mean      %.10f%%" % np.mean(accuracies))
+    print("* median    %.10f%%" % np.median(accuracies))
+    print("* time      %.10f" % duration)
+    print("* samples/s %.10E" % (args.chunks * data.shape[2] / duration))
 
 def evaluate_time_cpu(args, model, dataloader):
     '''
@@ -130,8 +130,8 @@ def evaluate_time_cpu(args, model, dataloader):
 
     duration = time.perf_counter() - t0
 
-    print("* time      %.2f" % duration)
-    print("* samples/s %.2E" % (args.chunks * data.shape[2] / duration))
+    print("* time      %.10f" % duration)
+    print("* samples/s %.10E" % (args.chunks * data.shape[2] / duration))
 
 def runtime_simulator(model, dataloader):
     model.eval()
