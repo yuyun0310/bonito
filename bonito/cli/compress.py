@@ -104,7 +104,7 @@ def main(args):
         # Update sample count and batch count
         total_samples += batch[0].size(0)  # Assuming each batch contains input samples in the first dimension
         total_batches += 1
-        print(len(batch))
+        # print(len(batch))
     print("train_loader size:", total_samples)
     
 
