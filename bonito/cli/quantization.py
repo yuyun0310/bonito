@@ -28,6 +28,7 @@ class QuantizedModelWrapper(torch.nn.Module):
         self.decode_batch = model.decode_batch
         self.alphabet = model.alphabet
         self.seqdist = model.seqdist
+        self.config = model.config
 
     def forward(self, x):
         x = self.quant(x)
