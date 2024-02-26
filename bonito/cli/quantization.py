@@ -26,6 +26,7 @@ class QuantizedModelWrapper(torch.nn.Module):
         self.dequant = DeQuantStub()
         self.decode = model.decode
         self.decode_batch = model.decode_batch
+        self.alphabet = model.alphabet
 
     def forward(self, x):
         x = self.quant(x)
