@@ -62,11 +62,12 @@ class Swish(torch.nn.SiLU):
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         print("in swish")
-        self.dequant(input)
+        input = self.dequant(input)
+        print(input)
 
         output = super().forward(input)
         
-        self.quant(output)
+        output = self.quant(output)
 
         return output
 
