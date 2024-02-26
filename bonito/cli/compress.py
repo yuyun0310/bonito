@@ -168,13 +168,14 @@ def main(args):
 
         elif args.calib == 'kl_distil':
             # quantized_model = knowledge_distillation()
+
             pass
         else:
             pass
     
     elif args.static:
         quantized_model = static_quantization_wrapper(model_copy)
-        quantized_model.to('cuda')
+        quantized_model.to('cpu')
 
         # Set the model to evaluation mode
         quantized_model.eval()
@@ -186,7 +187,7 @@ def main(args):
         # Assuming calibration_dataset is a DataLoader object providing input tensors
         with torch.no_grad():
             for data, *_ in train_loader:
-                data = data.to('cuda')
+                data = data.to('cpu')
                 quantized_model(data)
 
         quantized_model.to('cpu')
