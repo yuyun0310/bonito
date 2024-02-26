@@ -6,6 +6,7 @@ import numpy as np
 from bonito.util import accuracy, decode_ref, permute, get_parameters_count
 from bonito.training import ClipGrad, load_state
 from bonito.io import CSVLogger
+from bonito.crf.model import Model
 from memory_profiler import memory_usage
 from torch.quantization import QuantStub, DeQuantStub
 from datetime import datetime
@@ -23,6 +24,8 @@ class QuantizedModelWrapper(torch.nn.Module):
         self.quant = QuantStub()
         self.model = model
         self.dequant = DeQuantStub()
+        self.decode = model.decode
+        self.decode_batch = model.decode_batch
 
     def forward(self, x):
         x = self.quant(x)
