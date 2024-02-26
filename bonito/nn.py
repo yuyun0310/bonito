@@ -49,9 +49,26 @@ class Linear(Module):
         return res
 
 
+# @register
+# class Swish(torch.nn.SiLU):
+#     pass
+
 @register
 class Swish(torch.nn.SiLU):
-    pass
+    def __init__(self):
+        super().__init__()
+        self.quant = torch.ao.quantization.QuantStub()
+        self.dequant = torch.ao.quantization.DeQuantStub()
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        print("in swish")
+        self.dequant(input)
+
+        output = super().forward(input)
+        
+        self.quant(output)
+
+        return output
 
 
 @register
