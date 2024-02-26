@@ -61,9 +61,7 @@ class Swish(torch.nn.SiLU):
         self.dequant = torch.ao.quantization.DeQuantStub()
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-        print("in swish")
         input = self.dequant(input)
-        print(input)
 
         output = super().forward(input)
         
@@ -220,11 +218,16 @@ class LinearCRFEncoder(Module):
         self.linear = torch.nn.Linear(insize, size, bias=bias)
         self.activation = layers.get(activation, lambda: activation)()
         self.permute = permute
+        self.quant = torch.ao.quantization.QuantStub()
+        self.dequant = torch.ao.quantization.DeQuantStub()
 
     def forward(self, x):
         if self.permute is not None:
             x = x.permute(*self.permute)
         scores = self.linear(x)
+
+        scores = self.dequant(scores)
+
         if self.activation is not None:
             scores = self.activation(scores)
         if self.scale is not None:
@@ -236,6 +239,9 @@ class LinearCRFEncoder(Module):
                 (1, 0, 0, 0, 0, 0, 0, 0),
                 value=self.blank_score
             ).view(T, N, -1)
+
+        scores = self.quant(scores)
+
         return scores
 
     def to_dict(self, include_weights=False):
