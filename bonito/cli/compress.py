@@ -141,38 +141,6 @@ def main(args):
         )
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_dynamic.tar"))
-
-        # calib = ['no_calib', 'fine_tune', 'kl_distil']
-
-        if args.calib == 'fine_tune':
-            print('fine fune')
-            if config.get("lr_scheduler"):
-                sched_config = config["lr_scheduler"]
-                lr_scheduler_fn = getattr(
-                    import_module(sched_config["package"]), sched_config["symbol"]
-                )(**sched_config)
-            else:
-                lr_scheduler_fn = None
-            trainer = QuantizedFineTuner(
-                quantized_model, train_loader, valid_loader,
-                device=device,
-                criterion=None,
-                use_amp=False,
-                lr_scheduler_fn=lr_scheduler_fn
-            )
-
-            if (',' in args.lr):
-                lr = [float(x) for x in args.lr.split(',')]
-            else:
-                lr = float(args.lr)
-            quantized_model = trainer.fit(workdir, args.epochs, lr)
-
-        elif args.calib == 'kl_distil':
-            # quantized_model = knowledge_distillation()
-
-            pass
-        else:
-            pass
     
     elif args.static:
         quantized_model = static_quantization_wrapper(model_copy)
@@ -196,6 +164,41 @@ def main(args):
 
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_static.tar"))
+
+    '''
+    Fine Tune
+    '''
+    # calib = ['no_calib', 'fine_tune', 'kl_distil']
+
+    if args.calib == 'fine_tune':
+        print('fine fune')
+        if config.get("lr_scheduler"):
+            sched_config = config["lr_scheduler"]
+            lr_scheduler_fn = getattr(
+                import_module(sched_config["package"]), sched_config["symbol"]
+            )(**sched_config)
+        else:
+            lr_scheduler_fn = None
+        trainer = QuantizedFineTuner(
+            quantized_model, train_loader, valid_loader,
+            device=device,
+            criterion=None,
+            use_amp=False,
+            lr_scheduler_fn=lr_scheduler_fn
+        )
+
+        if (',' in args.lr):
+            lr = [float(x) for x in args.lr.split(',')]
+        else:
+            lr = float(args.lr)
+        quantized_model = trainer.fit(workdir, args.epochs, lr)
+
+    elif args.calib == 'kl_distil':
+        # quantized_model = knowledge_distillation()
+
+        pass
+    else:
+        pass
 
     '''
     Evaluation
