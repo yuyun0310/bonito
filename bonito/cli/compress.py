@@ -165,6 +165,10 @@ def main(args):
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_static.tar"))
 
+        print(model)
+        for name, param in model.named_parameters():
+            print(name, type(param), param.size())
+
     '''
     Fine Tune
     '''
