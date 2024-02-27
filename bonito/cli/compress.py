@@ -165,10 +165,10 @@ def main(args):
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
         torch.save(model_state, os.path.join(workdir, "weights_quant_static.tar"))
 
-        print(model)
-        for name, param in model.named_parameters():
+        print(quantized_model)
+        for name, param in quantized_model.named_parameters():
             print(name, type(param), param.size())
-        for param in model.parameters():
+        for param in quantized_model.parameters():
             print(param)
 
     '''
@@ -177,6 +177,7 @@ def main(args):
     # calib = ['no_calib', 'fine_tune', 'kl_distil']
 
     if args.calib == 'fine_tune':
+        quantized_model.train()
         print('fine fune')
         if config.get("lr_scheduler"):
             sched_config = config["lr_scheduler"]
