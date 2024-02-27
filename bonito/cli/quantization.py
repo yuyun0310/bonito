@@ -363,8 +363,11 @@ class QuantizedFineTuner:
             param_groups = [{'params': list(m.parameters()), 'lr': v} for (m, v) in zip(self.model.children(), lr)]
             self.optimizer = torch.optim.AdamW(param_groups, lr=lr[0], **kwargs)
         else:
-            print(self.model.parameters())
-            self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr, **kwargs)
+            print(self.model.parameters() is None)
+            if self.model.parameters() is None:
+                self.optimizer = torch.optim.AdamW(self.model.weight(), lr=lr, **kwargs)
+            else:
+                self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr, **kwargs)
 
     def get_lr_scheduler(self, epochs, last_epoch=0):
         return self.lr_scheduler_fn(self.optimizer, self.train_loader, epochs, last_epoch)
