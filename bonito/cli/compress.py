@@ -145,6 +145,7 @@ def main(args):
         # calib = ['no_calib', 'fine_tune', 'kl_distil']
 
         if args.calib == 'fine_tune':
+            print('fine fune')
             if config.get("lr_scheduler"):
                 sched_config = config["lr_scheduler"]
                 lr_scheduler_fn = getattr(
