@@ -174,6 +174,14 @@ def main(args):
         print(quantized_model.parameters())
         for param in quantized_model.parameters():
             print(param)
+
+        for name, module in quantized_model.named_modules():
+            if hasattr(module, 'weight'):
+                # Access quantized weights directly
+                print(f"{name}.weight:", module.weight().size())
+            if hasattr(module, 'weight_dequant'):
+                # Access dequantized weights for inspection
+                print(f"{name}.weight_dequant:", module.weight_dequant().size())
         print("$" *100)
         print("$" *100)
 
