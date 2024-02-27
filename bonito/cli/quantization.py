@@ -29,6 +29,7 @@ class QuantizedModelWrapper(torch.nn.Module):
         self.alphabet = model.alphabet
         self.seqdist = model.seqdist
         self.config = model.config
+        self.loss = model.loss
 
     def forward(self, x):
         x = self.quant(x)
