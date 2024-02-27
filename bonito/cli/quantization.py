@@ -52,7 +52,7 @@ class QuantizedModelWrapper(Model):
 
     def forward(self, x):
         x = self.quant(x)
-        x = super().forward()
+        x = super().forward(x)
         x = self.dequant(x)
         return x
         
