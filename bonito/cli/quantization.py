@@ -18,22 +18,41 @@ import torch.cuda.amp as amp
 from tqdm import tqdm
 import tracemalloc
 
-class QuantizedModelWrapper(torch.nn.Module):
+# class QuantizedModelWrapper(torch.nn.Module):
+#     def __init__(self, model):
+#         super(QuantizedModelWrapper, self).__init__()
+#         self.quant = QuantStub()
+#         self.model = model
+#         self.dequant = DeQuantStub()
+#         self.decode = model.decode
+#         self.decode_batch = model.decode_batch
+#         self.alphabet = model.alphabet
+#         self.seqdist = model.seqdist
+#         self.config = model.config
+#         self.loss = model.loss
+
+#     def forward(self, x):
+#         x = self.quant(x)
+#         x = self.model(x)
+#         x = self.dequant(x)
+#         return x
+
+class QuantizedModelWrapper(Model):
     def __init__(self, model):
-        super(QuantizedModelWrapper, self).__init__()
+        super().__init__(model.config)
         self.quant = QuantStub()
         self.model = model
         self.dequant = DeQuantStub()
-        self.decode = model.decode
-        self.decode_batch = model.decode_batch
-        self.alphabet = model.alphabet
-        self.seqdist = model.seqdist
-        self.config = model.config
-        self.loss = model.loss
+        # self.decode = model.decode
+        # self.decode_batch = model.decode_batch
+        # self.alphabet = model.alphabet
+        # self.seqdist = model.seqdist
+        # self.config = model.config
+        # self.loss = model.loss
 
     def forward(self, x):
         x = self.quant(x)
-        x = self.model(x)
+        x = super().forward()
         x = self.dequant(x)
         return x
         
@@ -344,6 +363,7 @@ class QuantizedFineTuner:
             param_groups = [{'params': list(m.parameters()), 'lr': v} for (m, v) in zip(self.model.children(), lr)]
             self.optimizer = torch.optim.AdamW(param_groups, lr=lr[0], **kwargs)
         else:
+            print(self.model.parameters())
             self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr, **kwargs)
 
     def get_lr_scheduler(self, epochs, last_epoch=0):
