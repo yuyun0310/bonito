@@ -168,6 +168,8 @@ def main(args):
         print(model)
         for name, param in model.named_parameters():
             print(name, type(param), param.size())
+        for param in model.parameters():
+            print(param)
 
     '''
     Fine Tune
