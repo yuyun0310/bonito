@@ -168,8 +168,14 @@ def main(args):
         print(quantized_model)
         for name, param in quantized_model.named_parameters():
             print(name, type(param), param.size())
+
+        print("$" *100)
+        print("$" *100)
+        print(quantized_model.parameters())
         for param in quantized_model.parameters():
             print(param)
+        print("$" *100)
+        print("$" *100)
 
     '''
     Fine Tune
