@@ -217,6 +217,7 @@ def main(args):
         model_copy.eval()
         model_copy.cpu()
         quantized_model = torch.quantization.convert(model_copy, inplace=False)
+        quantized_model.to('cpu')
 
         print("$" *100)
         print("$" *100)
