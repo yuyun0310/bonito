@@ -203,14 +203,16 @@ def main(args):
 
         trainer = Trainer(
             model_copy, device, train_loader, valid_loader,
-            lr_scheduler_fn=lr_scheduler_fn
+            lr_scheduler_fn=lr_scheduler_fn,
+            criterion=None,
+            use_amp=False
         )
 
         if (',' in args.lr):
             lr = [float(x) for x in args.lr.split(',')]
         else:
             lr = float(args.lr)
-        trainer.fit(workdir, args.epochs, lr)
+        trainer.fit(workdir, args.epochs, lr, load_epoch=False)
 
         model_copy.eval()
         model_copy.cpu()
