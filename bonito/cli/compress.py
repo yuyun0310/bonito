@@ -188,6 +188,7 @@ def main(args):
 
     elif args.QAT:
         model_copy.train()
+        model_copy = static_quantization_wrapper(model_copy)
         model_copy.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
 
         # Apply QAT preparations
