@@ -187,6 +187,7 @@ def main(args):
         print("$" *100)
 
     elif args.QAT:
+        model_copy.train()
         model_copy.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
 
         # Apply QAT preparations
