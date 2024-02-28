@@ -28,6 +28,7 @@ from importlib import import_module
 # from bonito_compression.bonito import bonito
 # from memory_profiler import memory_usage
 from bonito.nn import layers
+from bonito_compression.bonito.bonito.training import Trainer
 
 def main(args):
     current_backend = torch.backends.quantized.engine
@@ -185,6 +186,51 @@ def main(args):
         print("$" *100)
         print("$" *100)
 
+    elif args.QAT:
+        model_copy.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
+
+        # Apply QAT preparations
+        torch.quantization.prepare_qat(model_copy, inplace=True)
+
+        if config.get("lr_scheduler"):
+            sched_config = config["lr_scheduler"]
+            lr_scheduler_fn = getattr(
+                import_module(sched_config["package"]), sched_config["symbol"]
+            )(**sched_config)
+        else:
+            lr_scheduler_fn = None
+
+        trainer = Trainer(
+            model_copy, device, train_loader, valid_loader,
+            lr_scheduler_fn=lr_scheduler_fn
+        )
+
+        if (',' in args.lr):
+            lr = [float(x) for x in args.lr.split(',')]
+        else:
+            lr = float(args.lr)
+        trainer.fit(workdir, args.epochs, lr)
+
+        model_copy.eval()
+        model_copy.cpu()
+        quantized_model = torch.quantization.convert(model_copy, inplace=False)
+
+        print("$" *100)
+        print("$" *100)
+        print(quantized_model.parameters())
+        for param in quantized_model.parameters():
+            print(param)
+
+        for name, module in quantized_model.named_modules():
+            if hasattr(module, 'weight'):
+                # Access quantized weights directly
+                print(f"{name}.weight:", module.weight().size())
+            if hasattr(module, 'weight_dequant'):
+                # Access dequantized weights for inspection
+                print(f"{name}.weight_dequant:", module.weight_dequant().size())
+        print("$" *100)
+        print("$" *100)
+
     '''
     Fine Tune
     '''
@@ -320,6 +366,7 @@ def argparser():
     group_method = parser.add_mutually_exclusive_group()
     group_method.add_argument("--dynamic", action="store_true", default=False)
     group_method.add_argument("--static", action="store_true", default=False)
+    group_method.add_argument("--QAT", action="store_true", default=False)
     parser.add_argument("--calib", default='no_calib', type=str)
 
     return parser
