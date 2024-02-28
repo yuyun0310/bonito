@@ -224,11 +224,14 @@ class Trainer:
     def get_lr_scheduler(self, epochs, last_epoch=0):
         return self.lr_scheduler_fn(self.optimizer, self.train_loader, epochs, last_epoch)
 
-    def fit(self, workdir, epochs=1, lr=2e-3, **optim_kwargs):
+    def fit(self, workdir, epochs=1, lr=2e-3, load_epoch=True, **optim_kwargs):
         if self.optimizer is None:
             self.init_optimizer(lr, **optim_kwargs)
 
-        last_epoch = load_state(workdir, self.device, self.model, self.optimizer if self.restore_optim else None)
+        if load_epoch:
+            last_epoch = load_state(workdir, self.device, self.model, self.optimizer if self.restore_optim else None)
+        else:
+            last_epoch = 0
 
         if self.restore_optim:
         # override learning rate to new value
