@@ -28,7 +28,7 @@ from importlib import import_module
 # from bonito_compression.bonito import bonito
 # from memory_profiler import memory_usage
 from bonito.nn import layers
-from bonito_compression.bonito.bonito.training import Trainer
+from bonito.training import Trainer
 
 def main(args):
     current_backend = torch.backends.quantized.engine
