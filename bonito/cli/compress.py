@@ -133,7 +133,9 @@ def main(args):
 
     model_copy.to('cpu')  # Move the model to CPU for quantization
 
+    mode = None
     if args.dynamic:
+        mode = 'dynamic'
         # Apply dynamic quantization to the LSTM and linear layers
         quantized_model = quantize_dynamic(
             model_copy,
@@ -144,6 +146,7 @@ def main(args):
         torch.save(model_state, os.path.join(workdir, "weights_quant_dynamic.tar"))
     
     elif args.static:
+        mode = 'static'
         quantized_model = static_quantization_wrapper(model_copy)
         quantized_model.to('cpu')
 
@@ -187,6 +190,7 @@ def main(args):
         print("$" *100)
 
     elif args.QAT:
+        mode = 'QAT'
         model_copy.train()
         model_copy = static_quantization_wrapper(model_copy)
         model_copy.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
@@ -293,7 +297,8 @@ def main(args):
         print()
 
         print("[compare model size before and after quantization]")
-        evaluate_model_static_memory("weights_orig.tar", "weights_quant_dynamic.tar", workdir)
+        quantized_filename = "weights_quant_" + mode + ".tar"
+        evaluate_model_static_memory("weights_orig.tar", quantized_filename, workdir)
 
         print("[compare model structure before and after quantization]")
         model_structure_comparison(model, quantized_model, workdir)
