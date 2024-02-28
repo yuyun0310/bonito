@@ -240,6 +240,9 @@ def main(args):
         print("$" *100)
         print("$" *100)
 
+        model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
+        torch.save(model_state, os.path.join(workdir, "weights_quant_QAT.tar"))
+
     '''
     Fine Tune
     '''
