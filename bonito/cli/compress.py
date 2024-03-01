@@ -13,7 +13,7 @@ from pathlib import Path
 from bonito.data import load_numpy, load_script
 from bonito.util import __models__, default_config
 from bonito.util import load_model, load_symbol, init
-from bonito.cli.quantization import evaluate_model_size, measure_dynamic_memory_usage, model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_static_memory, print_model_info, save_quantized_model, static_quantization_wrapper, evaluate_runtime_memory
+from bonito.cli.quantization import evaluate_model_size, knowledge_distillation, measure_dynamic_memory_usage, model_structure_comparison, evaluate_accuracy, evaluate_time_cpu, evaluate_model_static_memory, print_model_info, save_quantized_model, static_quantization_wrapper, evaluate_runtime_memory
 from bonito.cli.quantization import QuantizedFineTuner
 
 import toml
@@ -249,8 +249,8 @@ def main(args):
     # calib = ['no_calib', 'fine_tune', 'kl_distil']
 
     if args.calib == 'fine_tune':
+        print('[fine fune]')
         quantized_model.train()
-        print('fine fune')
         if config.get("lr_scheduler"):
             sched_config = config["lr_scheduler"]
             lr_scheduler_fn = getattr(
@@ -273,9 +273,9 @@ def main(args):
         quantized_model = trainer.fit(workdir, args.epochs, lr)
 
     elif args.calib == 'kl_distil':
-        # quantized_model = knowledge_distillation()
+        print('[knowledge distillation]')
+        quantized_model = knowledge_distillation(model, quantized_model, train_loader, num_epochs=5)
 
-        pass
     else:
         pass
 
