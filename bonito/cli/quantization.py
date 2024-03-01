@@ -18,6 +18,9 @@ import torch.cuda.amp as amp
 from tqdm import tqdm
 import tracemalloc
 
+import torch.nn as nn
+import torch.optim as optim
+
 # class QuantizedModelWrapper(torch.nn.Module):
 #     def __init__(self, model):
 #         super(QuantizedModelWrapper, self).__init__()
@@ -443,3 +446,30 @@ def measure_dynamic_memory_usage(model, data_loader):
                 print(stat)
     
     tracemalloc.stop()
+
+# Define distillation loss function
+def distillation_loss(y_student, y_teacher, temperature=5):
+    p_student = torch.nn.functional.softmax(y_student / temperature, dim=1)
+    p_teacher = torch.nn.functional.softmax(y_teacher / temperature, dim=1)
+    loss = -torch.mean(torch.sum(p_teacher * torch.log(p_student), dim=1))
+    return loss
+
+def knowledge_distillation(teacher_net, student_net, train_loader, num_epochs=5):
+    criterion = nn.BCELoss()
+    optimizer = optim.Adam(student_net.parameters(), lr=0.001)
+
+    for epoch in range(num_epochs):
+        student_net.train()
+        running_loss = 0.0
+        for inputs, labels in train_loader:
+            optimizer.zero_grad()
+            outputs_teacher = teacher_net(inputs).squeeze()
+            outputs_student = student_net(inputs).squeeze()
+            loss = criterion(outputs_student, labels.float()) + distillation_loss(outputs_student.unsqueeze(1), outputs_teacher.unsqueeze(1), temperature=5)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item() * inputs.size(0)
+        epoch_loss = running_loss / len(train_loader.dataset)
+        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}')
+    
+    return student_net
