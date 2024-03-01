@@ -527,9 +527,12 @@ class QuantizedKnowledgeDistillator:
                 soft_teacher_outputs = torch.softmax(teacher_scores_ / self.temperature, dim=1)
                 soft_student_outputs = torch.log_softmax(student_scores_ / self.temperature, dim=1)
                 losses_ = self.distillation_loss(soft_student_outputs, soft_teacher_outputs)
+
+                if not isinstance(losses_, dict): losses_ = {'loss': losses_}
                 
-                losses_.requires_grad_()
-                self.scaler.scale(losses_).backward()
+                total_loss = losses_.get('total_loss', losses_['loss']) / self.grad_accum_split
+                total_loss.requires_grad_()
+                self.scaler.scale(total_loss).backward()
 
                 losses = {
                     k: ((v.item() / self.grad_accum_split) if losses is None else (v.item() / self.grad_accum_split) + losses[k])
