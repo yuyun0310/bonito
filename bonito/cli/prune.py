@@ -148,8 +148,8 @@ def main(args):
     for module, param in parameters_to_prune:
         prune.remove(module, param)
 
-    # prep_for_save() follows this: https://github.com/pytorch/pytorch/issues/33618
-    model.prep_for_save()
+    # # prep_for_save() follows this: https://github.com/pytorch/pytorch/issues/33618
+    # model.prep_for_save()
 
     torch.save(model.state_dict(), os.path.join(workdir, "weights_final.tar"))
     print("After pruning, model has %d params\n" % get_parameters_count(model))
