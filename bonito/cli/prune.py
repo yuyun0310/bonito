@@ -71,6 +71,7 @@ def main(args):
     model = load_model(args.pretrained, device, half=False, weights=args.weights)
     optimizer = AdamW(model.parameters(), amsgrad=False, lr=args.lr)
     torch.save(model.state_dict(), os.path.join(workdir, "weights.orig.tar"))
+    torch.save(model, os.path.join(workdir, "model.orig.tar"))
     criterion = model.seqdist.ctc_loss if hasattr(model, 'seqdist') else None
     last_epoch = 0
 
@@ -114,6 +115,7 @@ def main(args):
                     )
 
                 torch.save(model.state_dict(), os.path.join(workdir, "weights_%s_%s.tar" % (pruning_iter, epoch)))
+                torch.save(model, os.path.join(workdir, "model_%s_%s.tar" % (pruning_iter, epoch)))
 
                 val_loss, val_mean, val_median = test(
                     model, device, valid_loader, criterion=criterion
@@ -143,15 +145,17 @@ def main(args):
                 ]))
 
         torch.save(model.state_dict(), os.path.join(workdir, "weights_prune_%s.tar" % pruning_iter))
+        torch.save(model, os.path.join(workdir, "model_prune_%s.tar" % pruning_iter))
 
     # Making pruned parameterisation permanent
     for module, param in parameters_to_prune:
         prune.remove(module, param)
 
-    # # prep_for_save() follows this: https://github.com/pytorch/pytorch/issues/33618
+    # prep_for_save() follows this: https://github.com/pytorch/pytorch/issues/33618
     # model.prep_for_save()
 
     torch.save(model.state_dict(), os.path.join(workdir, "weights_final.tar"))
+    torch.save(model, os.path.join(workdir, "model_final.tar"))
     print("After pruning, model has %d params\n" % get_parameters_count(model))
 
     # Sparsifying
@@ -159,6 +163,9 @@ def main(args):
     for param_tensor in model_state:
         model_state[param_tensor] = model_state[param_tensor].to_sparse()
     torch.save(model_state, os.path.join(workdir, "weights_final_sparse.tar"))
+
+    model.load_state_dict(model_state)
+    torch.save(model, os.path.join(workdir, "model_final_sparse.tar"))
 
 
 def argparser():
