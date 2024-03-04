@@ -9,7 +9,8 @@ import koi
 from koi.ctc import SequenceDist, Max, Log, semiring
 from koi.ctc import logZ_cu, viterbi_alignments, logZ_cu_sparse, bwd_scores_cu_sparse, fwd_scores_cu_sparse
 
-from bonito.nn import Module, Convolution, LinearCRFEncoder, Serial, Permute, layers, to_dict, from_dict, register
+from bonito.nn import Module, RNNWrapper, Convolution, LinearCRFEncoder, Serial, Permute, layers, to_dict, from_dict, register
+from torch.nn import Linear
 
 
 def get_stride(m, stride=1):
@@ -244,3 +245,13 @@ class Model(SeqdistModel):
             chunksize=kwargs["chunksize"] // self.stride,
             quantize=kwargs["quantize"],
         )
+
+    def get_parameters_to_prune(self):
+        parameters_to_prune = []
+        modules = self.encoder.named_modules()
+        for _name, module in modules:
+            if isinstance(module, Linear):
+                parameters_to_prune.append((module, "weight"))
+            if isinstance(module, RNNWrapper):
+                parameters_to_prune.extend(module.get_parameters_to_prune())
+        return parameters_to_prune
