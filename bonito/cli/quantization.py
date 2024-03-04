@@ -218,7 +218,7 @@ def evaluate_model_size(model, quantized_model, workdir):
 
 def save_quantized_model(model, config, argsdict, workdir, file_path):
     toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
-    torch.save(model.state_dict(), os.path.join(workdir, file_path))
+    torch.save(model, os.path.join(workdir, file_path))
 
 class QuantizedFineTuner:
     def __init__(
