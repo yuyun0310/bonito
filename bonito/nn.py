@@ -338,6 +338,18 @@ class RNNWrapper(Module):
 
     def extra_repr(self):
         return 'reverse={}'.format(bool(self.reverse))
+    
+    def get_parameters_to_prune(self):
+        parameters_to_prune = []
+        parameters_to_prune.append((self.rnn, 'weight_ih_l0'))
+        parameters_to_prune.append((self.rnn, 'weight_hh_l0'))
+        return parameters_to_prune
+
+    def flatten_params(self):
+        self.rnn.flatten_parameters()
+
+    def prep_for_save(self):
+        self.rnn._apply(lambda x: x)
 
 
 @register
