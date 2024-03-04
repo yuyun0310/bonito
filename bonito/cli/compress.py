@@ -123,7 +123,7 @@ def main(args):
         os.makedirs(workdir, exist_ok=True)
         argsdict = dict(training=vars(args))
         toml.dump({**config, **argsdict}, open(os.path.join(workdir, 'config.toml'), 'w'))
-        torch.save(model.state_dict(), os.path.join(workdir, "weights_orig.tar"))
+        torch.save(model, os.path.join(workdir, "weights_orig.tar"))
 
     '''
     Quantization
@@ -143,7 +143,8 @@ def main(args):
             dtype=torch.qint8  # Use 8-bit integer quantization
         )
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
-        torch.save(model_state, os.path.join(workdir, "weights_quant_dynamic.tar"))
+        # torch.save(model_state, os.path.join(workdir, "weights_quant_dynamic.tar"))
+        torch.save(quantized_model, os.path.join(workdir, "weights_quant_dynamic.tar"))
     
     elif args.static:
         mode = 'static'
@@ -167,7 +168,8 @@ def main(args):
         quantized_model = torch.quantization.convert(quantized_model, inplace=True)
 
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
-        torch.save(model_state, os.path.join(workdir, "weights_quant_static.tar"))
+        # torch.save(model_state, os.path.join(workdir, "weights_quant_static.tar"))
+        torch.save(quantized_model, os.path.join(workdir, "weights_quant_static.tar"))
 
         print(quantized_model)
         for name, param in quantized_model.named_parameters():
@@ -241,7 +243,8 @@ def main(args):
         print("$" *100)
 
         model_state = quantized_model.module.state_dict() if hasattr(quantized_model, 'module') else quantized_model.state_dict()
-        torch.save(model_state, os.path.join(workdir, "weights_quant_QAT.tar"))
+        # torch.save(model_state, os.path.join(workdir, "weights_quant_QAT.tar"))
+        torch.save(quantized_model, os.path.join(workdir, "weights_quant_QAT.tar"))
 
     '''
     Fine Tune
