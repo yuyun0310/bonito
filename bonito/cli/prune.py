@@ -57,8 +57,6 @@ def main(args):
     train_loader = DataLoader(ChunkDataSet(*train_data), batch_size=args.batch, shuffle=True, num_workers=4, pin_memory=True)
     valid_loader = DataLoader(ChunkDataSet(*valid_data), batch_size=args.batch, num_workers=4, pin_memory=True)
 
-    
-
     # Writing config file to workdir
     argsdict = dict(training=vars(args))
     chunk_config = {}
@@ -74,6 +72,7 @@ def main(args):
     optimizer = AdamW(model.parameters(), amsgrad=False, lr=args.lr)
     torch.save(model.state_dict(), os.path.join(workdir, "weights.orig.tar"))
     criterion = model.seqdist.ctc_loss if hasattr(model, 'seqdist') else None
+    last_epoch = 0
 
     val_loss, val_mean, val_median = test(model, device, valid_loader, criterion=criterion)
     print("\n[start] directory={} loss={:.4f} mean_acc={:.3f}% median_acc={:.3f}%".format(workdir, val_loss, val_mean, val_median))
