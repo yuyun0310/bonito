@@ -10,7 +10,7 @@ from functools import partial
 from time import perf_counter
 from collections import OrderedDict
 
-from bonito.util import accuracy, decode_ref, permute, concat, match_names
+from bonito.prune_util import accuracy, decode_ref, permute, concat, match_names
 
 import torch
 import numpy as np
