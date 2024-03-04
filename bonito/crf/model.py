@@ -255,3 +255,17 @@ class Model(SeqdistModel):
             if isinstance(module, RNNWrapper):
                 parameters_to_prune.extend(module.get_parameters_to_prune())
         return parameters_to_prune
+    
+    def flatten_params(self):
+        self.encoder._modules['7'].flatten_params()
+        self.encoder._modules['8'].flatten_params()
+        self.encoder._modules['9'].flatten_params()
+        self.encoder._modules['10'].flatten_params()
+        self.encoder._modules['11'].flatten_params()
+
+    def prep_for_save(self):
+        self.encoder._modules['7'].prep_for_save()
+        self.encoder._modules['8'].prep_for_save()
+        self.encoder._modules['9'].prep_for_save()
+        self.encoder._modules['10'].prep_for_save()
+        self.encoder._modules['11'].prep_for_save()
