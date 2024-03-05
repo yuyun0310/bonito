@@ -164,7 +164,7 @@ def main(args):
         model_state[param_tensor] = model_state[param_tensor].to_sparse()
     torch.save(model_state, os.path.join(workdir, "weights_final_sparse.tar"))
 
-    model.load_state_dict(model_state)
+    # model.load_state_dict(model_state)
     torch.save(model, os.path.join(workdir, "model_final_sparse.tar"))
 
 
